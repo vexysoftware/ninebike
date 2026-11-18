@@ -21,6 +21,7 @@ export function Shell() {
           <div className="nav-section">Comercial</div>
           <NavLink to="/app/pipeline"><Icon name="kanban" /> Pipeline</NavLink>
           <NavLink to="/app/contatos"><Icon name="users" /> Contatos</NavLink>
+          <NavLink to="/app/vendas"><Icon name="list" /> Registro de vendas</NavLink>
           <NavLink to="/app/aniversariantes"><Icon name="cake" /> Aniversariantes</NavLink>
           <div className="nav-section">Loja</div>
           <NavLink to="/app/estoque"><Icon name="bike" /> Catálogo e estoque</NavLink>

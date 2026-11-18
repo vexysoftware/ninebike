@@ -358,6 +358,7 @@ function OpportunityDialog({ id, onClose, owners }: { id: string; onClose: () =>
             <Link to={`/app/contatos/${d.contact_id}`}>{d.contact_name}</Link>
             {d.mobile_phone && <a className="btn btn-sm" href={waLink(d.mobile_phone)} target="_blank" rel="noreferrer"><Icon name="phone" /> {formatPhone(d.mobile_phone)}</a>}
             <span className="subtle">Origem: {d.source === 'landing' ? 'Site' : 'Cadastro manual'}</span>
+            <Link className="btn btn-sm btn-primary" to={`/app/propostas/nova?contato=${d.contact_id}&oportunidade=${d.id}`}>Criar proposta</Link>
           </div>
           {d.lost_reason && <div className="alert alert-danger"><strong>Motivo da perda</strong>{d.lost_reason}</div>}
           <form onSubmit={submit} noValidate style={{ display: 'grid', gap: 16 }}>

@@ -154,6 +154,7 @@ export function SettingsPage() {
           <p className="subtle" style={{ marginTop: 12 }}>Página pública: <a href="/" target="_blank" rel="noreferrer">{window.location.origin}/</a></p>
         </section>
       </div>
+      <PolicyCard />
       {supabase && <MfaEnrollCard />}
       <InviteDialog open={invite} onClose={() => setInvite(false)} onDone={() => { setInvite(false); users.reload(); }} sensitive={sensitive} />
       <MfaPrompt open={!!mfaRetry} onCancel={() => setMfaRetry(null)} onDone={async () => { const fn = mfaRetry!; setMfaRetry(null); await sensitive(fn); }} />
@@ -212,6 +213,32 @@ function MfaEnrollCard() {
         }}>Confirmar</button>
       </div>}
       {msg && <p style={{ marginTop: 8 }}>{msg}</p>}
+    </section>
+  );
+}
+
+function PolicyCard() {
+  const pol = useLoad(() => api.get<{ revision: number; reservation_minutes: number; quote_validity_minutes: number; seller_max_discount_bps: number } | null>('/api/v1/commercial-policy'), []);
+  const [f, setF] = useState({ resH: '', valD: '', disc: '' });
+  const cmd = useCommand();
+  const p = pol.data;
+  return (
+    <section className="card">
+      <div className="card-head"><h2>Política comercial</h2>{p ? <Status tone="ok">Revisão {p.revision}</Status> : <Status tone="warn">Não configurada</Status>}</div>
+      <p className="muted" style={{ marginBottom: 12 }}>Sem política, não há reserva nem proposta. Cada alteração cria uma nova revisão; propostas antigas mantêm a regra da época.</p>
+      {p && <p style={{ marginBottom: 12 }}>Reserva {p.reservation_minutes / 60} h · validade da proposta {p.quote_validity_minutes / 1440} dia(s) · desconto da vendedora até {p.seller_max_discount_bps / 100}%</p>}
+      <form className="form-grid" onSubmit={async (e) => {
+        e.preventDefault();
+        const body = { expected_revision: p?.revision ?? 0, reservation_minutes: Math.round(Number(f.resH.replace(',', '.')) * 60),
+          quote_validity_minutes: Math.round(Number(f.valD.replace(',', '.')) * 1440), seller_max_discount_bps: Math.round(Number(f.disc.replace(',', '.')) * 100) };
+        if (await cmd.run('POST', '/api/v1/admin/policy-versions', body, { success: 'Política salva.' })) pol.reload();
+      }}>
+        <Field label="Prazo da reserva (horas)">{(x) => <input {...x} className="input" inputMode="decimal" value={f.resH} onChange={(e) => setF({ ...f, resH: e.target.value })} placeholder="48" />}</Field>
+        <Field label="Validade da proposta (dias)">{(x) => <input {...x} className="input" inputMode="decimal" value={f.valD} onChange={(e) => setF({ ...f, valD: e.target.value })} placeholder="7" />}</Field>
+        <Field label="Desconto máximo da vendedora (%)">{(x) => <input {...x} className="input" inputMode="decimal" value={f.disc} onChange={(e) => setF({ ...f, disc: e.target.value })} placeholder="5" />}</Field>
+        <div className="form-actions" style={{ alignSelf: 'end' }}><button className="btn btn-primary" disabled={cmd.busy}>Salvar nova revisão</button></div>
+      </form>
+      {cmd.error != null && <div className="alert alert-danger" style={{ marginTop: 12 }}>{describeError(cmd.error)}</div>}
     </section>
   );
 }

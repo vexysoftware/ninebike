@@ -12,6 +12,7 @@ import { BirthdaysPage, ContactDetailPage, ContactsPage, SuppliersPage } from '.
 import { PipelinePage } from './pages/Pipeline';
 import { InventoryPage, ProductDetailPage } from './pages/Inventory';
 import { HomePage, SettingsPage } from './pages/Home';
+import { OrderPage, QuoteEditorPage, QuotePage, SalesPage } from './pages/Sales';
 
 function RequireSession({ children, permission }: { children: ReactNode; permission?: string }) {
   const { session, loading, can } = useSession();
@@ -36,6 +37,11 @@ createRoot(document.getElementById('root')!).render(
               <Route path="contatos" element={<ContactsPage />} />
               <Route path="contatos/:id" element={<ContactDetailPage />} />
               <Route path="aniversariantes" element={<BirthdaysPage />} />
+              <Route path="vendas" element={<SalesPage />} />
+              <Route path="vendas/:id" element={<OrderPage />} />
+              <Route path="propostas/nova" element={<QuoteEditorPage />} />
+              <Route path="propostas/:id" element={<QuotePage />} />
+              <Route path="propostas/:id/editar" element={<QuoteEditorPage />} />
               <Route path="estoque" element={<InventoryPage />} />
               <Route path="estoque/:id" element={<ProductDetailPage />} />
               <Route path="fornecedores" element={<RequireSession permission="suppliers.read"><SuppliersPage /></RequireSession>} />

@@ -258,6 +258,35 @@ route('POST', '/api/v1/inventory/recounts', async (c) =>
 route('PATCH', '/api/v1/inventory/units/{id}/identification', async (c) =>
   command(c, 'unit.identification', 'unit_identification', [c.params.id, await body(c, S.parseUnitIdentification)]));
 
+// ---------------------------------------------------------------- propostas, reservas e Registro de vendas
+route('GET', '/api/v1/commercial-policy', async (c) => ok(c, await q(c, 'policy_get')));
+route('POST', '/api/v1/admin/policy-versions', async (c) => command(c, 'policy.create', 'policy_create', [await body(c, S.policyCreate)], 201));
+route('GET', '/api/v1/quotes', async (c) => ok(c, await q(c, 'quote_list', [{ opportunity_id: uuidParam(c.url, 'opportunity_id') ?? null, contact_id: uuidParam(c.url, 'contact_id') ?? null }])));
+route('GET', '/api/v1/quotes/{id}', async (c) => ok(c, await q(c, 'quote_get', [c.params.id])));
+route('POST', '/api/v1/quotes', async (c) => command(c, 'quote.create', 'quote_create', [await body(c, S.quoteCreate)], 201));
+route('PATCH', '/api/v1/quotes/{id}', async (c) => command(c, 'quote.revise', 'quote_revise', [c.params.id, await body(c, S.quoteRevision)]));
+route('POST', '/api/v1/reservations', async (c) => command(c, 'reservation.create', 'reservation_create', [await body(c, S.reservationCreate)], 201));
+route('POST', '/api/v1/quotes/{id}/reservation-release', async (c) => command(c, 'reservation.release', 'reservation_release', [c.params.id]));
+route('POST', '/api/v1/orders', async (c) => command(c, 'order.confirm', 'order_confirm', [await body(c, S.orderCreate)], 201));
+route('GET', '/api/v1/orders', async (c) => {
+  const st = c.url.searchParams.get('state');
+  const from = c.url.searchParams.get('from'); const to = c.url.searchParams.get('to');
+  const filters = { owner_id: uuidParam(c.url, 'owner_id') ?? null, contact_id: uuidParam(c.url, 'contact_id') ?? null,
+    state: st && ['CONFIRMED', 'CANCELLED', 'CLOSED'].includes(st) ? st : null,
+    from: from ? `${date(from, 'from')}T03:00:00Z` : null, to: to ? `${date(to, 'to')}T03:00:00Z` : null };
+  const cur = await decodeCursor(c.url.searchParams.get('cursor'), filters);
+  const r = await q<{ data: Array<{ confirmed_at: string; id: string }>; has_more: boolean; totals: unknown }>(c, 'order_list', [{
+    ...filters, limit: limitParam(c.url), cursor_at: cur?.[0] ?? null, cursor_id: cur?.[1] ?? null }]);
+  const last = r.data[r.data.length - 1];
+  const next = r.has_more && last ? await encodeCursor([last.confirmed_at, last.id], filters) : null;
+  return json(c, 200, { data: r.data, totals: r.totals, page: { next_cursor: next, has_more: next !== null }, request_id: c.requestId });
+});
+route('GET', '/api/v1/orders/{id}', async (c) => ok(c, await q(c, 'order_get', [c.params.id])));
+route('POST', '/api/v1/orders/{id}/cancellations', async (c) => command(c, 'order.cancel', 'order_cancel', [c.params.id, await body(c, S.orderCancel)]));
+// Entrega e cobrança dependem do recebimento oficial (PSP, T07) — indisponíveis, sem sucesso fictício.
+route('POST', '/api/v1/orders/{id}/deliveries', async () => { throw new ApiError('CAPABILITY_UNAVAILABLE', { reason: 'payment_provider_pending' }); });
+route('POST', '/api/v1/payments', async () => { throw new ApiError('CAPABILITY_UNAVAILABLE', { reason: 'payment_provider_pending' }); });
+
 // ---------------------------------------------------------------- fotos (bucket privado)
 function requireStorage(c: Ctx): FileStorage {
   if (!c.deps.storage) throw new ApiError('CAPABILITY_UNAVAILABLE', { reason: 'storage_not_configured' });

@@ -236,3 +236,21 @@ export const attachmentCreate = object({
 
 export const invitationCreate = object({ email: req(string({ min: 3, max: 254 })), name: req(name), profile: req(enumOf('SELLER', 'OWNER')) });
 export const accessPatch = object({ expected_version: req(positiveInt), active: opt((v, p) => { if (typeof v !== 'boolean') throw fieldError(p, 'must_be_boolean'); return v; }), profile: opt(enumOf('SELLER', 'OWNER')) });
+
+// ---------------------------------------------------------------- T04/T05 propostas, reservas, pedidos
+const quoteItem = object({ product_id: req(uuid), unit_id: opt(nullable(uuid)), quantity: req(int({ min: 1, max: 50 })), discount_cents: opt(moneyCents) });
+export const quoteCreate = object({ contact_id: req(uuid), opportunity_id: opt(nullable(uuid)), items: req(array(quoteItem, { min: 1, max: 30 })), freight_cents: opt(moneyCents) });
+export const quoteRevision = object({ expected_version: req(positiveInt), contact_id: req(uuid), opportunity_id: opt(nullable(uuid)),
+  items: req(array(quoteItem, { min: 1, max: 30 })), freight_cents: opt(moneyCents) });
+export const reservationCreate = object({ quote_id: req(uuid), quote_version: req(positiveInt) });
+const allocation: Parser<Record<string, unknown>> = (v, path) => {
+  const a = object({ mode: req(enumOf('PIX', 'BOLETO', 'CARD', 'KOIN_APP_PIX')), principal_cents: req(moneyCents), due_date: req(date),
+    installment_count: opt(int({ min: 1, max: 24 })) })(v, path);
+  if (a.mode !== 'CARD' && a.installment_count !== undefined) throw fieldError(`${path}.installment_count`, 'only_for_card');
+  if (a.principal_cents === '0') throw fieldError(`${path}.principal_cents`, 'must_be_positive');
+  return a;
+};
+export const orderCreate = object({ quote_id: req(uuid), quote_version: req(positiveInt), allocations: req(array(allocation, { min: 1, max: 6 })) });
+export const orderCancel = object({ expected_version: req(positiveInt), reason: req(string({ min: 1, max: 300 })) });
+export const policyCreate = object({ expected_revision: req(nonNegativeInt), reservation_minutes: req(int({ min: 15, max: 60 * 24 * 30 })),
+  quote_validity_minutes: req(int({ min: 60, max: 60 * 24 * 90 })), seller_max_discount_bps: req(int({ min: 0, max: 5000 })) });
