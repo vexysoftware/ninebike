@@ -1,0 +1,19 @@
+{
+  "baseline_version": "2.10.0",
+  "source": "ninebike-os-planejamento-main.zip (upload do responsável, 18/11/2026)",
+  "imported_at": "2026-11-18",
+  "sha256": {
+    "001-sistema/acceptance.md": "622c05cda6806b72fc60088e09534141638e359db8ca8fb7f571baafd48bb3a5",
+    "001-sistema/architecture.md": "b119f397f0c84dc475a54fded047eca09bb2bb70a1ff4ab295c9d3777828676b",
+    "001-sistema/build-guide.md": "ac44cd862f02ba85e735d69c5169b6f00fe5d62f241e3eb692e051939527efb4",
+    "001-sistema/contracts/api.md": "50afce25b7c2a1e72dc3cb937269750f5194b1a9ba5a2f4a07247754b9764dd3",
+    "001-sistema/data-model.md": "1dc7004bfea237bb23aecd0f47fcfae78489e64869db9d41d0a6a218c49e7fa9",
+    "001-sistema/design.md": "56fcbd0baa9e1dfd19e323f11071ba125321520b7a1638f24ca4e618f4fa1bb0",
+    "001-sistema/fiscal.md": "54f02b57385bf85fa0cb439193883126ad3cb2fe65c32028c50fc83c92552ce6",
+    "001-sistema/plan.md": "5992b37a107b2a665fa6d12723857843cd39fd3e7060466bf09f8b4f849002d7",
+    "001-sistema/quickstart.md": "42ec45c031e37391eac81c49cfdacf051573c5d0e3500a955cf44097fbbf3210",
+    "001-sistema/spec.md": "b45c33e04520bcad549986a4c01d2d7a88f38fbe4082e0ad896a7b5decda05c0",
+    "001-sistema/tasks.md": "9ff8068fdc2e4446b96a056d0c24cc6d9d0bdeadc42219fb68302f34d81a0f17",
+    "README.md": "f2ec5f68b7c60aa41cb9e7d1b0844f492fbf5ea9cbbab174017fc041500fbda2"
+  }
+}

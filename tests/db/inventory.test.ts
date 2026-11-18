@@ -140,3 +140,11 @@ describe('fotos', () => {
     expect(a.body.code).toBe('CAPABILITY_UNAVAILABLE');
   });
 });
+
+describe('histórico imutável', () => {
+  it('movimento de estoque não aceita UPDATE/DELETE', async () => {
+    const r = await create({ name: 'Imutável', initial_quantity: 1 });
+    await expect(admin`update inventory.inventory_movements set reason = 'x' where product_id = ${r.body.data.id}`).rejects.toThrow(/append-only/);
+    await expect(admin`delete from inventory.inventory_movements where product_id = ${r.body.data.id}`).rejects.toThrow(/append-only/);
+  });
+});

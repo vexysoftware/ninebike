@@ -43,7 +43,11 @@ export default {
       },
       storage: env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY ? new SupabaseStorage(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY) : null,
       storageBucket: env.STORAGE_BUCKET ?? 'ninebike-private',
-      authAdmin: env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY ? new SupabaseAuthAdmin(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY) : null,
+      authAdmin: env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY
+        ? new SupabaseAuthAdmin(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
+        : local && adminSql
+          ? { inviteUser: async (email) => console.log(`[local] convite registrado para ${email}: entre com este e-mail em /app/entrar`) }
+          : null,
       devLogin: adminSql && env.DEV_JWT_SECRET ? makeDevLogin(adminSql, env.DEV_JWT_SECRET, issuer) : undefined,
     };
     try {

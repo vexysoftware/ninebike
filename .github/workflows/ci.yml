@@ -1,0 +1,40 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ["54329:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Bancos sintéticos (instalação limpa)
+        run: |
+          psql -h 127.0.0.1 -p 54329 -U postgres -c "create database ninebike_test" -c "create database ninebike"
+      - run: npm run test:unit
+      - run: npm run test:db
+      - run: npm run test:integration
+      - name: Jornadas no navegador (Worker local + Postgres)
+        run: |
+          DATABASE_URL=postgres://postgres:postgres@127.0.0.1:54329/ninebike node scripts/migrate.mjs --reset
+          psql -h 127.0.0.1 -p 54329 -U postgres -d ninebike -c "alter role ninebike_api login password 'ninebike_api_local'"
+          cp .dev.vars.example .dev.vars
+          npx playwright install --with-deps chromium
+          (npx wrangler dev --port 8787 --ip 127.0.0.1 > wrangler.log 2>&1 &)
+          npx wait-on -t 60000 http://127.0.0.1:8787/
+          npm run test:e2e
