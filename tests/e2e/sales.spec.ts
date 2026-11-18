@@ -35,6 +35,12 @@ test('venda completa até pedido confirmado (sem cobrança fictícia)', async ({
   await expect(page.locator('.stat').filter({ hasText: 'Pagamento' })).toContainText('Aguardando pagamento');
   await expect(page.locator('.stat').filter({ hasText: 'Nota fiscal' })).toContainText('Nota não preparada');
 
+  // Nota: rascunho a partir do pedido; validar mostra pendências; envio desligado.
+  await page.getByRole('button', { name: 'Preparar nota' }).click();
+  await expect(page.getByText('Envio à SEFAZ desligado')).toBeVisible();
+  await page.getByRole('button', { name: 'Validar' }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'Pendências para validar' })).toContainText('NCM');
+
   await page.goto('/app/vendas');
   await expect(page.getByRole('row').filter({ hasText: lead })).toBeVisible();
 });

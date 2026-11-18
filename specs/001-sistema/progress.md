@@ -70,9 +70,32 @@ Dois estados separados, como exige o guia (§2.1): **código verificado** (teste
 - Fotos: adaptador Supabase Storage escrito, **não exercitado** contra um projeto real.
 - Abertura de estoque de itens migrados (`UNKNOWN` → recontagem com confirmação) existe no banco, sem tela própria; depende da migração T13.
 
-## T04–T16
+## T04 + T05 (núcleo) — 19/11/2026
 
-Não iniciadas nesta entrega. Próxima fatia pelo guia: T04 (proposta, reserva em grupo, Registro de vendas) junto com o núcleo puro de T05 (`money.ts`, comissão 1,5% bruto em centavos) — confirmação de pedido só com a RPC atômica conjunta. T07–T09 continuam aguardando o contrato do PSP; T11 sem transmissão; T12 após T14; T15 condicionada.
+**Código verificado**
+- Política comercial versionada (prazo de reserva, validade, alçada de desconto da vendedora); sem política não há proposta nem reserva.
+- Proposta versionada por série; preço sempre do catálogo no servidor; desconto acima da alçada → `APPROVAL_REQUIRED`.
+- Reserva em grupo tudo-ou-nada sob lock; disputa pela última bike com sessões reais → uma ativa; expiração por estado persistido.
+- Confirmação atômica: pedido (número interno), itens com snapshot de preço e custo histórico (`null` se desconhecido), unidades comprometidas, condições de pagamento somando o total e comissão por alvos cumulativos `floor((B*15+500)/1000)`; duas confirmações concorrentes → um pedido.
+- Registro de vendas (lista/detalhe/totais), escopo da vendedora, sem custo; cancelamento sem pagamento devolve o estoque.
+- `money.ts` com bigint e 10.000 casos de rateio.
+
+**Bloqueado (externo):** cobrança, recebimento, split efetivo e entrega dependem do PSP (T07). As rotas respondem 503; nada é simulado.
+
+## T11 — preparo fiscal (modo UNDECIDED) — 19/11/2026
+
+**Código verificado**
+- Rascunho criado a partir do pedido; um documento vivo por pedido; vendedora prepara só da própria venda.
+- Validação local de campos exigidos (destinatário/documento, endereço para NF-e, NCM/CFOP por item, totais × pedido, emitente). Não é validação de XSD.
+- Aprovação humana: somente OWNER, MFA recente, sobre o hash exato da revisão; qualquer edição posterior invalida a aprovação.
+- Envio: 503 `issuer_not_homologated` — nenhuma transmissão.
+- Vínculo da nota autorizada no emissor atual (chave de 44 dígitos única, série/número/protocolo), sem reemitir.
+
+**Pendente:** tributos (dependem de perfil fiscal com contador), XML/DANFE/provedor, cancelamento/CC-e, pacote mensal, importação de XMLs.
+
+## Próximas
+
+T10 (despesas, contas a pagar/receber gerenciais, DRE com completude) e T16 em rascunho; T13 importação dos CSVs; T06 só quando existir o primeiro efeito externo. T07–T09/T15 aguardam o PSP; T12 após T14.
 
 ## Cenários de aceite cobertos por teste automatizado nesta entrega
 

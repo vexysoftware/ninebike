@@ -5,6 +5,7 @@ import { PageHead, useCommand } from '../components/Shell';
 import { Dialog, Empty, ErrorBox, Field, Icon, Loading, Status, formatInstant, formatPhone, useLoad } from '../components/ui';
 import { useSession } from '../session';
 import { MfaPrompt } from './Auth';
+import { FiscalSettingsCard } from './Fiscal';
 
 export function HomePage() {
   const { session } = useSession();
@@ -155,6 +156,7 @@ export function SettingsPage() {
         </section>
       </div>
       <PolicyCard />
+      <FiscalSettingsCard />
       {supabase && <MfaEnrollCard />}
       <InviteDialog open={invite} onClose={() => setInvite(false)} onDone={() => { setInvite(false); users.reload(); }} sensitive={sensitive} />
       <MfaPrompt open={!!mfaRetry} onCancel={() => setMfaRetry(null)} onDone={async () => { const fn = mfaRetry!; setMfaRetry(null); await sensitive(fn); }} />

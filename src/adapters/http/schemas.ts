@@ -254,3 +254,41 @@ export const orderCreate = object({ quote_id: req(uuid), quote_version: req(posi
 export const orderCancel = object({ expected_version: req(positiveInt), reason: req(string({ min: 1, max: 300 })) });
 export const policyCreate = object({ expected_revision: req(nonNegativeInt), reservation_minutes: req(int({ min: 15, max: 60 * 24 * 30 })),
   quote_validity_minutes: req(int({ min: 60, max: 60 * 24 * 90 })), seller_max_discount_bps: req(int({ min: 0, max: 5000 })) });
+
+// ---------------------------------------------------------------- T11 fiscal (sem transmissão)
+export const fiscalCreate = object({ order_id: req(uuid), model: opt(enumOf('55', '65')) });
+export function parseFiscalPatch(body: unknown): Record<string, unknown> {
+  const p = object({
+    expected_version: req(positiveInt),
+    recipient: opt(object({ person_type: opt(enumOf('PF', 'PJ')), cpf: opt(nullable(string({ max: 20 }))), cnpj: opt(nullable(string({ max: 20 }))),
+      name: opt(string({ min: 1, max: 200 })), email: opt(optionalText(254)), state_registration: opt(optionalText(20)),
+      address: opt(object({ postal_code: opt(optionalText(9)), street: opt(optionalText(200)), number: opt(optionalText(20)),
+        complement: opt(optionalText(100)), district: opt(optionalText(100)), city: opt(optionalText(100)), state: opt(optionalText(2)) })) })),
+    items: opt(array(object({ position: req(nonNegativeInt), ncm: opt(nullable(string({ max: 10 }))), cfop: opt(nullable(string({ max: 4 }))) }), { max: 50 })),
+    additional_info: opt(optionalText(2000)),
+  })(body, '') as Record<string, any>;
+  const r = p.recipient;
+  if (r) {
+    if (r.cpf) r.cpf = normalizeCpf(r.cpf, 'recipient.cpf');
+    if (r.cnpj) r.cnpj = normalizeCnpj(r.cnpj, 'recipient.cnpj');
+    if (r.address?.postal_code) r.address.postal_code = r.address.postal_code.replace(/\D/g, '');
+    if (r.address?.state) r.address.state = r.address.state.toUpperCase();
+  }
+  for (const it of p.items ?? []) {
+    if (it.ncm) { it.ncm = it.ncm.replace(/\D/g, ''); if (!/^\d{8}$/.test(it.ncm)) throw fieldError(`items[${it.position}].ncm`, 'invalid_ncm'); }
+    if (it.cfop && !/^[1-7]\d{3}$/.test(it.cfop)) throw fieldError(`items[${it.position}].cfop`, 'invalid_cfop');
+  }
+  return p;
+}
+export const fiscalVersion = object({ expected_version: req(positiveInt) });
+export const fiscalApprove = object({ expected_version: req(positiveInt), snapshot_hash: req(string({ min: 64, max: 64 })) });
+export const fiscalEvidence: Parser<Record<string, unknown>> = (v, path) => {
+  const p = object({ expected_version: req(positiveInt), access_key: req(string({ min: 44, max: 60 })), series: opt(optionalText(3)),
+    number: opt(optionalText(9)), protocol: opt(optionalText(20)), authorized_at: opt(nullable(instant)) })(v, path) as Record<string, any>;
+  p.access_key = p.access_key.replace(/\D/g, '');
+  if (!/^\d{44}$/.test(p.access_key)) throw fieldError('access_key', 'invalid_access_key');
+  return p;
+};
+export const fiscalSettings = object({ expected_version: req(positiveInt), issuer: req(object({
+  legal_name: req(string({ min: 1, max: 200 })), cnpj: req(string({ max: 20 })), state_registration: opt(optionalText(20)),
+  state: req(string({ min: 2, max: 2 })), tax_regime: req(enumOf('SIMPLES_NACIONAL', 'LUCRO_PRESUMIDO', 'LUCRO_REAL')) })) });

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { accessToken, api, describeError } from '../api';
+import { HttpError, accessToken, api, describeError } from '../api';
 import { PageHead, useCommand } from '../components/Shell';
 import { Empty, ErrorBox, Field, Icon, Loading, Status, formatCents, formatDateOnly, formatInstant, parseMoneyInput, centsToInput, useLoad } from '../components/ui';
 import { useSession } from '../session';
@@ -232,6 +232,7 @@ async function fetchOrders(path: string) {
 
 export function OrderPage() {
   const { id } = useParams();
+  const nav = useNavigate();
   const { session } = useSession();
   const o = useLoad(() => api.get<Order>(`/api/v1/orders/${id}`), [id]);
   const cmd = useCommand();
@@ -244,6 +245,12 @@ export function OrderPage() {
       <PageHead title={`Pedido #${d.display_number}`} subtitle={`${formatInstant(d.confirmed_at)} · ${d.seller.name}`}>
         <Status tone={STATE[d.commercial_state]?.[1] ?? 'neutral'}>{STATE[d.commercial_state]?.[0]}</Status>
         <Link className="btn" to={`/app/propostas/${d.quote_id}`}>Proposta</Link>
+        {d.commercial_state === 'CONFIRMED' && <button className="btn btn-primary" disabled={cmd.busy} onClick={async () => {
+          let existing: string | undefined;
+          const r = await cmd.run<{ id: string }>('POST', '/api/v1/fiscal-documents', { order_id: d.id }, { quiet: true,
+            onError: (e) => { if (e instanceof HttpError) existing = e.details.document_id as string | undefined; } });
+          if (r || existing) nav(`/app/notas/${r?.id ?? existing}`);
+        }}>{d.fiscal_state === 'NOT_PREPARED' ? 'Preparar nota' : 'Abrir nota'}</button>}
       </PageHead>
       <div className="stats">
         <div className="stat"><div className="k">Total</div><div className="v">{formatCents(d.total_cents)}</div></div>

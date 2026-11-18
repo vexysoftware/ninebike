@@ -5,7 +5,7 @@ import { Db, type CommandCtx } from './adapters/persistence/db';
 import { sniffImage, type AuthAdmin, type FileStorage } from './adapters/providers/supabase';
 import * as S from './adapters/http/schemas';
 import { date, isUuid, type Parser } from './adapters/http/validate';
-import { normalizeEmail } from './modules/crm/contact-rules';
+import { normalizeCnpj, normalizeEmail } from './modules/crm/contact-rules';
 
 export type AppDeps = {
   db: Db;
@@ -286,6 +286,32 @@ route('POST', '/api/v1/orders/{id}/cancellations', async (c) => command(c, 'orde
 // Entrega e cobrança dependem do recebimento oficial (PSP, T07) — indisponíveis, sem sucesso fictício.
 route('POST', '/api/v1/orders/{id}/deliveries', async () => { throw new ApiError('CAPABILITY_UNAVAILABLE', { reason: 'payment_provider_pending' }); });
 route('POST', '/api/v1/payments', async () => { throw new ApiError('CAPABILITY_UNAVAILABLE', { reason: 'payment_provider_pending' }); });
+
+// ---------------------------------------------------------------- fiscal: preparo e aprovação humana; transmissão desligada
+route('GET', '/api/v1/fiscal-documents', async (c) => {
+  const st = c.url.searchParams.get('review_state');
+  return ok(c, await q(c, 'fiscal_document_list', [{ review_state: st && /^[A-Z_]{1,30}$/.test(st) ? st : null }]));
+});
+route('GET', '/api/v1/fiscal-documents/{id}', async (c) => ok(c, await q(c, 'fiscal_document_get', [c.params.id])));
+route('POST', '/api/v1/fiscal-documents', async (c) => command(c, 'fiscal.create', 'fiscal_document_create', [await body(c, S.fiscalCreate)], 201));
+route('PATCH', '/api/v1/fiscal-documents/{id}/draft', async (c) => command(c, 'fiscal.update', 'fiscal_document_update', [c.params.id, await body(c, S.parseFiscalPatch)]));
+route('POST', '/api/v1/fiscal-documents/{id}/validations', async (c) => command(c, 'fiscal.validate', 'fiscal_document_validate', [c.params.id, await body(c, S.fiscalVersion)]));
+route('POST', '/api/v1/fiscal-documents/{id}/approvals', async (c) => command(c, 'fiscal.approve', 'fiscal_document_approve', [c.params.id, await body(c, S.fiscalApprove)]));
+route('POST', '/api/v1/fiscal-documents/{id}/external-evidence', async (c) => command(c, 'fiscal.evidence', 'fiscal_external_evidence', [c.params.id, await body(c, S.fiscalEvidence)]));
+// Envio exige provedor fiscal homologado (modo OS_PRIMARY). Até lá, nunca transmite nem finge autorização.
+route('POST', '/api/v1/fiscal-documents/{id}/submit', async () => { throw new ApiError('CAPABILITY_UNAVAILABLE', { reason: 'issuer_not_homologated' }); });
+route('GET', '/api/v1/admin/fiscal-configurations', async (c) => ok(c, await q(c, 'fiscal_settings_get')));
+route('PATCH', '/api/v1/admin/fiscal-configurations', async (c) => {
+  const p = await body(c, S.fiscalSettings);
+  const issuer = { ...p.issuer, cnpj: normalizeCnpj(p.issuer.cnpj, 'issuer.cnpj'), state: p.issuer.state.toUpperCase() };
+  return command(c, 'fiscal.settings', 'fiscal_settings_update', [{ ...p, issuer }]);
+});
+route('PATCH', '/api/v1/catalog/products/{id}/ncm', async (c) => {
+  const raw = (await readJson(c.req)) as { ncm?: unknown };
+  const ncm = typeof raw?.ncm === 'string' ? raw.ncm.replace(/\D/g, '') : '';
+  if (!/^\d{8}$/.test(ncm)) throw fieldError('ncm', 'invalid_ncm');
+  return command(c, 'product.ncm', 'product_set_ncm', [c.params.id, { ncm }]);
+});
 
 // ---------------------------------------------------------------- fotos (bucket privado)
 function requireStorage(c: Ctx): FileStorage {

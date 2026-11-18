@@ -11,7 +11,7 @@ export async function migrate({ url, reset = false, log = console.log } = {}) {
   const sql = postgres(url, { max: 1, onnotice: () => {} });
   try {
     if (reset) {
-      await sql.unsafe(`drop schema if exists api, inventory, crm, integrations, audit, identity, auth cascade;
+      await sql.unsafe(`drop schema if exists api, fiscal, sales, finance, inventory, crm, integrations, audit, identity, auth cascade;
         drop table if exists public.ninebike_migrations;`);
     }
     await sql.unsafe(readFileSync(join(root, 'scripts/supabase-local-shim.sql'), 'utf8'));
