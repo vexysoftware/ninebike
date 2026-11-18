@@ -1,0 +1,4 @@
+# Copie para .dev.vars (não versionado). Somente desenvolvimento local.
+DATABASE_URL=postgres://ninebike_api:ninebike_api_local@127.0.0.1:54329/ninebike
+DEV_ADMIN_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:54329/ninebike
+DEV_JWT_SECRET=troque-este-segredo-local-com-32-caracteres-ou-mais

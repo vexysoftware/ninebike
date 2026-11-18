@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ninebike-os",
+  "main": "src/worker.ts",
+  "compatibility_date": "2025-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/public/v1/*"]
+  },
+  "observability": { "enabled": true },
+  // Ambiente local: banco PostgreSQL local; segredos de dev em .dev.vars (fora do Git).
+  "vars": { "ENVIRONMENT": "local", "APP_ORIGIN": "http://localhost:5173" },
+  "env": {
+    "staging": {
+      "name": "ninebike-os-staging",
+      "vars": { "ENVIRONMENT": "staging", "APP_ORIGIN": "https://REPLACE-staging-domain" },
+      // Preencher com o ID do Hyperdrive do projeto Supabase de staging (papel ninebike_api).
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "REPLACE_STAGING_HYPERDRIVE_ID" }]
+    },
+    "production": {
+      "name": "ninebike-os",
+      "vars": { "ENVIRONMENT": "production", "APP_ORIGIN": "https://REPLACE-production-domain" },
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "REPLACE_PRODUCTION_HYPERDRIVE_ID" }]
+    }
+  }
+}
