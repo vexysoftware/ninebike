@@ -125,13 +125,15 @@ function RuleCard({ rule, onDone }: { rule: Rule | null; onDone: () => void }) {
   );
 }
 
-type AgentClient = { id: string; name: string; token_prefix: string; scopes: string[]; created_at: string; created_by_name: string; revoked_at: string | null; last_used_at: string | null; requests_24h: number };
+type AgentClient = { id: string; name: string; token_prefix: string; scopes: string[]; created_at: string; created_by_name: string; revoked_at: string | null; last_used_at: string | null; requests_24h: number; allowed_ips: string[]; expires_at: string | null };
 const SCOPES = [['catalog.read', 'Consultar produtos, preço e estoque'], ['customers.read', 'Reconhecer cliente pelo celular'], ['leads.write', 'Registrar lead e anotações no CRM']] as const;
 
 export function AgentKeysCard() {
   const list = useLoad(() => api.get<AgentClient[]>('/api/v1/admin/agent-clients'), []);
   const [name, setName] = useState('IA WhatsApp (n8n)');
   const [scopes, setScopes] = useState<string[]>(SCOPES.map((s) => s[0]));
+  const [ips, setIps] = useState('');
+  const [days, setDays] = useState('365');
   const [token, setToken] = useState<string | null>(null);
   const cmd = useCommand();
   return (
@@ -148,7 +150,7 @@ export function AgentKeysCard() {
         </div>)}
       <form className="form-grid" onSubmit={async (e) => {
         e.preventDefault();
-        const r = await cmd.run<{ token: string }>('POST', '/api/v1/admin/agent-clients', { name, scopes }, { success: 'Chave criada.' });
+        const r = await cmd.run<{ token: string }>('POST', '/api/v1/admin/agent-clients', { name, scopes, allowed_ips: ips.split(/[\s,;]+/).filter(Boolean), expires_in_days: days ? Number(days) : null }, { success: 'Chave criada.' });
         if (r?.token) { setToken(r.token); list.reload(); }
       }}>
         <Field label="Nome da integração">{(p) => <input {...p} className="input" value={name} onChange={(e) => setName(e.target.value)} required />}</Field>
@@ -157,6 +159,11 @@ export function AgentKeysCard() {
             <label key={k} style={{ display: 'flex', gap: 8, alignItems: 'center' }}><input type="checkbox" checked={scopes.includes(k)}
               onChange={(e) => setScopes(e.target.checked ? [...scopes, k] : scopes.filter((s) => s !== k))} /> {label}</label>))}
         </fieldset>
+        <Field label="IPs permitidos" optional help="IP fixo do servidor do n8n. Vazio = qualquer IP">{(p) => <input {...p} className="input" value={ips} onChange={(e) => setIps(e.target.value)} placeholder="203.0.113.7" />}</Field>
+        <Field label="Validade">{(p) => (
+          <select {...p} className="input" value={days} onChange={(e) => setDays(e.target.value)}>
+            <option value="90">90 dias</option><option value="180">6 meses</option><option value="365">1 ano</option><option value="">Sem validade</option>
+          </select>)}</Field>
         <div className="form-actions" style={{ alignSelf: 'end' }}><button className="btn btn-primary" disabled={cmd.busy || scopes.length === 0}>Gerar chave</button></div>
       </form>
       {list.loading ? <Loading /> : list.error ? <ErrorBox error={list.error} onRetry={list.reload} /> : list.data!.length > 0 && (
@@ -164,10 +171,60 @@ export function AgentKeysCard() {
           <thead><tr><th>Nome</th><th>Chave</th><th>Permissões</th><th>Último uso</th><th className="num">24 h</th><th /></tr></thead>
           <tbody>{list.data!.map((k) => (
             <tr key={k.id}><td>{k.name}<div className="subtle">por {k.created_by_name}</div></td><td><code>{k.token_prefix}…</code></td>
-              <td className="subtle">{k.scopes.join(', ')}</td><td>{formatInstant(k.last_used_at)}</td><td className="num">{k.requests_24h}</td>
+              <td className="subtle">{k.scopes.join(', ')}{k.allowed_ips.length > 0 && <div>IP: {k.allowed_ips.join(', ')}</div>}{k.expires_at && <div>vence {formatInstant(k.expires_at)}</div>}</td><td>{formatInstant(k.last_used_at)}</td><td className="num">{k.requests_24h}</td>
               <td>{k.revoked_at ? <Status tone="neutral">Revogada</Status> : <button className="btn btn-sm" onClick={async () => {
                 if (window.confirm(`Revogar “${k.name}”? A IA deixa de consultar o sistema na hora.`) && (await cmd.run('POST', `/api/v1/admin/agent-clients/${k.id}/revoke`, undefined, { success: 'Chave revogada.' }))) list.reload();
               }}>Revogar</button>}</td></tr>))}
+          </tbody></table></div>)}
+    </section>
+  );
+}
+
+type Webhook = { id: string; name: string; url: string; events: string[]; active: boolean; last_success_at: string | null; last_error: string | null; pending: number; failed_7d: number };
+const EVENTS = [['lead.created', 'Lead novo'], ['order.confirmed', 'Venda confirmada'], ['order.cancelled', 'Venda cancelada'], ['fiscal.ready_for_review', 'Nota pronta p/ revisão']] as const;
+
+export function WebhooksCard() {
+  const list = useLoad(() => api.get<Webhook[]>('/api/v1/admin/webhooks'), []);
+  const [f, setF] = useState({ name: 'n8n', url: '', events: EVENTS.map((e) => e[0]) as string[] });
+  const [secret, setSecret] = useState<string | null>(null);
+  const cmd = useCommand();
+  return (
+    <section className="card">
+      <div className="card-head"><h2>Automações (webhooks)</h2></div>
+      <p className="subtle" style={{ marginBottom: 12 }}>Avisa o n8n quando algo acontece. Ex.: venda confirmada → mensagem de boas-vindas; lead novo → alerta no grupo.</p>
+      {secret && (
+        <div className="alert" role="status" style={{ marginBottom: 12 }}>
+          <strong>Segredo de assinatura (mostrado uma vez):</strong>
+          <div className="unit-row" style={{ marginTop: 8 }}><code style={{ wordBreak: 'break-all', flex: 1 }}>{secret}</code>
+            <button className="btn btn-sm" onClick={() => void navigator.clipboard?.writeText(secret)}>Copiar</button>
+            <button className="btn btn-sm" onClick={() => setSecret(null)}>Já copiei</button></div>
+        </div>)}
+      <form className="form-grid" onSubmit={async (e) => {
+        e.preventDefault();
+        const r = await cmd.run<{ secret: string }>('POST', '/api/v1/admin/webhooks', f, { success: 'Webhook criado.' });
+        if (r?.secret) { setSecret(r.secret); setF({ ...f, url: '' }); list.reload(); }
+      }}>
+        <Field label="Nome">{(p) => <input {...p} className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />}</Field>
+        <Field label="URL do webhook (https)">{(p) => <input {...p} className="input" type="url" value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} placeholder="https://n8n.suaempresa.com/webhook/..." required />}</Field>
+        <fieldset style={{ border: 0, padding: 0 }}><legend className="subtle">Eventos</legend>
+          {EVENTS.map(([k, label]) => (
+            <label key={k} style={{ display: 'flex', gap: 8, alignItems: 'center' }}><input type="checkbox" checked={f.events.includes(k)}
+              onChange={(e) => setF({ ...f, events: e.target.checked ? [...f.events, k] : f.events.filter((x) => x !== k) })} /> {label}</label>))}
+        </fieldset>
+        <div className="form-actions" style={{ alignSelf: 'end' }}><button className="btn btn-primary" disabled={cmd.busy || !f.events.length}>Adicionar</button></div>
+      </form>
+      {list.data && list.data.length > 0 && (
+        <div className="table-wrap" style={{ border: 0, marginTop: 16 }}><table className="table">
+          <thead><tr><th>Nome</th><th>Eventos</th><th>Situação</th><th /></tr></thead>
+          <tbody>{list.data.map((w) => (
+            <tr key={w.id}><td>{w.name}<div className="subtle" style={{ wordBreak: 'break-all' }}>{w.url}</div></td>
+              <td className="subtle">{w.events.map((e) => EVENTS.find((x) => x[0] === e)?.[1] ?? e).join(', ')}</td>
+              <td>{!w.active ? <Status tone="neutral">Desligado</Status> : w.last_error ? <Status tone="danger">Erro: {w.last_error}</Status>
+                : w.last_success_at ? <Status tone="ok">OK · {formatInstant(w.last_success_at)}</Status> : <Status tone="info">Aguardando evento</Status>}
+                {w.pending > 0 && <div className="subtle">{w.pending} na fila</div>}</td>
+              <td><button className="btn btn-sm" onClick={async () => {
+                if (await cmd.run('POST', `/api/v1/admin/webhooks/${w.id}/active`, { active: !w.active }, { success: w.active ? 'Desligado.' : 'Ligado.' })) list.reload();
+              }}>{w.active ? 'Desligar' : 'Ligar'}</button></td></tr>))}
           </tbody></table></div>)}
     </section>
   );

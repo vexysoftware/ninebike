@@ -105,3 +105,65 @@ Mantenha fora do prompt promessas de desconto, prazo de entrega ou condição de
 | 422 | `VALIDATION_FAILED` | Celular inválido ou campo faltando (`details.field`). |
 | 429 | `RATE_LIMITED` | Aguardar e tentar de novo. |
 | 503 | `CAPABILITY_UNAVAILABLE` | Falta configurar o responsável pelos leads. |
+
+## 6. Segurança extra da chave
+
+Ao gerar a chave:
+- **IPs permitidos**: informe o IP fixo do servidor do n8n. Uma requisição de qualquer outro IP recebe `403`.
+- **Validade**: escolha 90 dias, 6 meses ou 1 ano. Depois do vencimento a chave passa a receber `401`; gere uma nova antes de vencer.
+
+## 7. Automações: o sistema avisando o n8n (webhooks)
+
+Para receber os avisos, cadastre a URL de um nó **Webhook** do n8n em **Configurações → Automações (webhooks)**. A URL precisa ser `https` e pública.
+
+### Eventos
+
+| Evento | Quando dispara |
+| --- | --- |
+| `lead.created` | Lead novo vindo do site ou da IA |
+| `order.confirmed` | Venda confirmada |
+| `order.cancelled` | Venda cancelada |
+| `fiscal.ready_for_review` | Nota pronta para revisão |
+
+### Formato
+
+```json
+{ "delivery_id": "uuid", "event": "order.confirmed", "occurred_at": "…",
+  "data": { "order_id": "…", "number": 42, "total_cents": "1249990", "customer_name": "…",
+            "mobile_phone": "+5511…", "seller_name": "…", "items": ["Bike elétrica Urban 350W"] } }
+```
+
+O payload nunca leva CPF, e-mail, endereço ou custo.
+
+### Entrega
+
+- O n8n deve responder `2xx`.
+- Sem `2xx`, o sistema tenta de novo em 1, 2, 4, 8… minutos (até 6 h entre tentativas) e desiste depois de 12 tentativas.
+- Use `delivery_id` para ignorar repetições.
+
+### Conferir a assinatura (nó Code do n8n)
+
+```js
+const crypto = require('crypto');
+const ts = $json.headers['x-ninebike-timestamp'];
+const sig = $json.headers['x-ninebike-signature'];
+const body = JSON.stringify($json.body); // use o corpo bruto se o nó permitir ("Raw Body")
+const expected = 'sha256=' + crypto.createHmac('sha256', $env.NINEBIKE_WEBHOOK_SECRET).update(`${ts}.${body}`).digest('hex');
+if (sig !== expected || Math.abs(Date.now() / 1000 - Number(ts)) > 300) throw new Error('assinatura inválida');
+return $input.all();
+```
+
+### Ideias de fluxo
+
+- **`order.confirmed`**: mensagem de boas-vindas e manual de uso da bike elétrica pelo WhatsApp.
+- **`lead.created`**: alerta no grupo dos vendedores com nome e produto de interesse.
+- **`fiscal.ready_for_review`**: aviso ao dono para revisar e aprovar a nota.
+
+## 8. Automações internas (já ligadas)
+
+- **Lead novo** (site ou IA): cria a tarefa "Responder lead" para o responsável, com prazo de 1 hora.
+- **Venda confirmada**: cria tarefas de pós-venda em 7 dias (avaliação e indicação) e em 30 dias (revisão e acessórios).
+- **A cada 5 minutos**:
+  - expira reservas vencidas, devolvendo a bike ao estoque;
+  - entrega os webhooks pendentes;
+  - limpa registros técnicos antigos.

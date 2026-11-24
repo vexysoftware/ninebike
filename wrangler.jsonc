@@ -11,6 +11,7 @@
     "run_worker_first": ["/api/*", "/public/v1/*", "/agent/v1/*"]
   },
   "observability": { "enabled": true },
+  "triggers": { "crons": ["*/5 * * * *"] },
   // Ambiente local: banco PostgreSQL local; segredos de dev em .dev.vars (fora do Git).
   "vars": { "ENVIRONMENT": "local", "APP_ORIGIN": "http://localhost:5173" },
   "env": {

@@ -138,6 +138,25 @@ Dois estados separados, como exige o guia (§2.1): **código verificado** (teste
 
 **Pendente (T10):** conciliação com extrato do PSP, contas a receber oficiais, fechamento mensal versionado e saldos de abertura.
 
+## Automação e segurança — 25/11/2026
+
+**Código verificado** (`tests/db/automation.test.ts`)
+
+Automação:
+- Tarefas automáticas: "Responder lead" em 1 h para lead do site ou da IA; pós-venda em 7 e 30 dias para a vendedora.
+- Fila de eventos (outbox) para webhooks:
+  - eventos lead novo, venda confirmada, venda cancelada e nota pronta para revisão;
+  - assinatura HMAC-SHA256 com timestamp;
+  - backoff exponencial, desistindo após 12 tentativas;
+  - payload sem CPF, e-mail ou custo;
+  - URL só `https` pública (bloqueio de SSRF: loopback, rede privada, IPv6 literal e credenciais na URL);
+  - segredo de assinatura mostrado uma vez.
+- Cron do Worker a cada 5 minutos: expira reservas vencidas, entrega webhooks e limpa registros técnicos.
+
+Segurança:
+- Chave da IA com lista de IPs permitidos (lidos de `cf-connecting-ip`) e validade.
+- Limite por usuário humano de 600 requisições por minuto (resposta 429).
+
 ## Próximas
 
 T10 (despesas, contas a pagar/receber gerenciais, DRE com completude) e T16 em rascunho; T13 importação dos CSVs; T06 só quando existir o primeiro efeito externo. T07–T09/T15 aguardam o PSP; T12 após T14.

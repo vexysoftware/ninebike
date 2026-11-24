@@ -6,7 +6,7 @@ import { Dialog, Empty, ErrorBox, Field, Icon, Loading, Status, formatCents, for
 import { useSession } from '../session';
 import { MfaPrompt } from './Auth';
 import { FiscalSettingsCard } from './Fiscal';
-import { AgentKeysCard } from './Commissions';
+import { AgentKeysCard, WebhooksCard } from './Commissions';
 import { FollowupsCard } from './SalesKit';
 
 export function HomePage() {
@@ -196,6 +196,7 @@ export function SettingsPage() {
       <PolicyCard />
       <FiscalSettingsCard />
       <AgentKeysCard />
+      <WebhooksCard />
       {supabase && <MfaEnrollCard />}
       <InviteDialog open={invite} onClose={() => setInvite(false)} onDone={() => { setInvite(false); users.reload(); }} sensitive={sensitive} />
       <MfaPrompt open={!!mfaRetry} onCancel={() => setMfaRetry(null)} onDone={async () => { const fn = mfaRetry!; setMfaRetry(null); await sensitive(fn); }} />

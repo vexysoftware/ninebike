@@ -76,7 +76,7 @@ describe('integração IA (n8n)', () => {
       expect((await call('POST', '/agent/v1/leads', { token: k.token, body: { ...body, note: 'outra' } })).status).toBe(409);
       const b = await call('POST', '/agent/v1/leads', { token: k.token, body: { ...body, event_id: crypto.randomUUID(), note: 'Voltou perguntando de parcelamento' } });
       expect(b.body.data).toMatchObject({ contact_id: a.body.data.contact_id, opportunity_id: a.body.data.opportunity_id, created_contact: false });
-      const [{ n }] = await admin`select count(*)::int n from crm.activities where opportunity_id = ${a.body.data.opportunity_id}`;
+      const [{ n }] = await admin`select count(*)::int n from crm.activities where opportunity_id = ${a.body.data.opportunity_id} and kind = 'NOTE'`;
       expect(n).toBe(2);
       const who = await call('GET', `/agent/v1/customers/by-phone?phone=${encodeURIComponent(jid)}`, { token: k.token });
       expect(who.body.data).toMatchObject({ found: true, customer: { name: 'Marcos Pedal', first_name: 'Marcos', seller_name: expect.any(String) } });

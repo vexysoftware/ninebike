@@ -5,6 +5,7 @@ import { Db, type CommandCtx } from './adapters/persistence/db';
 import { sniffImage, type AuthAdmin, type FileStorage } from './adapters/providers/supabase';
 import * as S from './adapters/http/schemas';
 import { date, isUuid, type Parser } from './adapters/http/validate';
+import { isSafeWebhookUrl } from './modules/integrations/webhooks';
 import { normalizeBrMobile, normalizeCnpj, normalizeEmail } from './modules/crm/contact-rules';
 
 export type AppDeps = {
@@ -67,7 +68,12 @@ export async function sha256Hex(s: string | Uint8Array): Promise<string> {
 const principals = new WeakMap<Request, Principal>();
 async function principal(c: Ctx): Promise<Principal> {
   let p = principals.get(c.req);
-  if (!p) principals.set(c.req, (p = await authenticate(c.req, c.deps.auth)));
+  if (!p) {
+    p = await authenticate(c.req, c.deps.auth);
+    // Limite geral por usuário (600 req/min): contém abuso de token vazado e scripts descontrolados.
+    if (!(await c.deps.db.query<boolean>('rate_hit', [p.userId]))) throw new ApiError('RATE_LIMITED');
+    principals.set(c.req, p);
+  }
   return p;
 }
 
@@ -404,7 +410,7 @@ route('POST', '/api/v1/admin/agent-clients', async (c) => {
   const raw = new Uint8Array(32); crypto.getRandomValues(raw);
   const token = 'nbk_' + btoa(String.fromCharCode(...raw)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const res = await command(c, 'agent_client.create', 'agent_client_create',
-    [{ name: p.name.trim(), scopes: p.scopes, token_hash: await sha256Hex(token), token_prefix: token.slice(0, 10) }], 201);
+    [{ name: p.name.trim(), scopes: p.scopes, allowed_ips: p.allowed_ips ?? [], expires_in_days: p.expires_in_days ?? null, token_hash: await sha256Hex(token), token_prefix: token.slice(0, 10) }], 201);
   if (res.headers.get('idempotent-replayed')) return res;
   const { data } = (await res.json()) as { data: Record<string, unknown> };
   return ok(c, { ...data, token }, 201);
@@ -415,7 +421,9 @@ async function agentToken(c: Ctx): Promise<string> {
   const h = c.req.headers.get('authorization') ?? '';
   const m = /^Bearer (nbk_[A-Za-z0-9_-]{20,100})$/.exec(h);
   if (!m) throw new ApiError('AUTH_REQUIRED');
-  return sha256Hex(m[1]);
+  // IP só do cabeçalho que a Cloudflare define na borda (o cliente não consegue forjá-lo atrás do proxy).
+  const ip = (c.req.headers.get('cf-connecting-ip') ?? '').trim().toLowerCase();
+  return (await sha256Hex(m[1])) + (/^[0-9a-f.:]{3,45}$/.test(ip) ? `@${ip}` : '');
 }
 /** Celular vindo do WhatsApp: aceita JID (5511999998888@s.whatsapp.net) e o formato antigo sem o nono dígito. */
 export function agentPhone(raw: string, path: string): string {
@@ -445,6 +453,21 @@ route('POST', '/agent/v1/leads', async (c) => {
   const r = await aq(c, 'agent_lead_upsert', [{ ...args, request_hash: await sha256Hex(canonical(args)) }]) as { replayed: boolean };
   return ok(c, r, r.replayed ? 200 : 201);
 });
+
+// ---------------------------------------------------------------- webhooks de saída (n8n etc.)
+route('GET', '/api/v1/admin/webhooks', async (c) => ok(c, await q(c, 'webhook_list')));
+route('POST', '/api/v1/admin/webhooks', async (c) => {
+  const p = await body(c, S.webhookCreate);
+  if (!isSafeWebhookUrl(p.url)) throw fieldError('url', 'https_public_url_required');
+  const raw = new Uint8Array(32); crypto.getRandomValues(raw);
+  const secret = 'whsec_' + [...raw].map((b) => b.toString(16).padStart(2, '0')).join('');
+  const res = await command(c, 'webhook.create', 'webhook_create', [{ name: p.name.trim(), url: p.url, events: p.events, secret }], 201);
+  if (res.headers.get('idempotent-replayed')) return res;
+  const { data } = (await res.json()) as { data: Record<string, unknown> };
+  return ok(c, { ...data, secret }, 201);
+});
+route('POST', '/api/v1/admin/webhooks/{id}/active', async (c) =>
+  command(c, 'webhook.active', 'webhook_set_active', [c.params.id, await body(c, S.webhookActive)]));
 
 // ---------------------------------------------------------------- desenvolvimento local
 route('POST', '/api/v1/dev/login', async (c) => {

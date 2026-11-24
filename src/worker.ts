@@ -3,6 +3,7 @@ import { createApp, type AppDeps } from './app';
 import { Db, createSql } from './adapters/persistence/db';
 import { SupabaseAuthAdmin, SupabaseStorage } from './adapters/providers/supabase';
 import { makeDevLogin } from './dev/dev-login';
+import { deliverOutbox } from './modules/integrations/webhooks';
 
 export interface Env {
   ASSETS: Fetcher;
@@ -54,6 +55,20 @@ export default {
       return await createApp(deps)(req);
     } finally {
       ctx.waitUntil(Promise.all([sql.end({ timeout: 5 }), adminSql?.end({ timeout: 5 })]));
+    }
+  },
+  // Rotina a cada 5 min: expira reservas, limpa registros técnicos e entrega webhooks pendentes.
+  async scheduled(_ev: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    const conn = env.HYPERDRIVE?.connectionString ?? env.DATABASE_URL;
+    if (!conn) return;
+    const sql = createSql(conn);
+    const db = new Db(sql);
+    try {
+      const m = await db.query('job_maintenance', []);
+      const w = await deliverOutbox(db);
+      console.log('job', JSON.stringify({ maintenance: m, webhooks: w }));
+    } finally {
+      ctx.waitUntil(sql.end({ timeout: 5 }));
     }
   },
 } satisfies ExportedHandler<Env>;

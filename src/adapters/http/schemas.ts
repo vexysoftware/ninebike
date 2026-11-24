@@ -1,6 +1,6 @@
 // Schemas fechados dos comandos (contracts/api.md §4) e mapeamento para os nomes de persistência.
 import {
-  array, boolTrue, date, enumOf, instant, int, moneyCents, nonNegativeInt, nullable, object, opt, optionalText,
+  array, boolean, boolTrue, date, enumOf, instant, int, moneyCents, nonNegativeInt, nullable, object, opt, optionalText,
   positiveInt, req, string, uuid, type Parser,
 } from './validate';
 import { fieldError } from './errors';
@@ -294,8 +294,18 @@ export const fiscalSettings = object({ expected_version: req(positiveInt), issue
   state: req(string({ min: 2, max: 2 })), tax_regime: req(enumOf('SIMPLES_NACIONAL', 'LUCRO_PRESUMIDO', 'LUCRO_REAL')) })) });
 
 // ---------------------------------------------------------------- IA do WhatsApp (n8n) e comissão da equipe
+const ip: Parser<string> = (v, path) => {
+  const s = string({ min: 3, max: 45 })(v, path).trim();
+  if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(s) && !/^[0-9a-fA-F:]{2,45}$/.test(s)) throw fieldError(path, 'invalid_ip');
+  if (s.includes('.') && s.split('.').some((o) => Number(o) > 255)) throw fieldError(path, 'invalid_ip');
+  return s.toLowerCase();
+};
 export const agentClientCreate = object({ name: req(string({ min: 1, max: 80 })),
-  scopes: req(array(enumOf('catalog.read', 'customers.read', 'leads.write'), { min: 1, max: 3 })) });
+  scopes: req(array(enumOf('catalog.read', 'customers.read', 'leads.write'), { min: 1, max: 3 })),
+  allowed_ips: opt(array(ip, { max: 20 })), expires_in_days: opt(nullable(int({ min: 1, max: 730 }))) });
+export const webhookCreate = object({ name: req(string({ min: 1, max: 80 })), url: req(string({ min: 10, max: 500 })),
+  events: req(array(enumOf('lead.created', 'order.confirmed', 'order.cancelled', 'fiscal.ready_for_review'), { min: 1, max: 4 })) });
+export const webhookActive = object({ active: req(boolean) });
 export const agentLead = object({ event_id: req(uuid), name: req(name), mobile_phone: req(string({ min: 8, max: 30 })),
   note: opt(optionalText(2000)), interest_product_id: opt(nullable(uuid)) });
 export const staffCommissionRule = object({ expected_version: req(nonNegativeInt), default_bps: req(int({ min: 0, max: 3000 })),
