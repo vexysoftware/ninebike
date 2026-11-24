@@ -4,6 +4,7 @@ import { HttpError, api, describeError, fieldOf } from '../api';
 import { PageHead, useCommand } from '../components/Shell';
 import { Dialog, Empty, ErrorBox, Field, Icon, Loading, Status, centsToInput, formatCents, formatInstant, parseMoneyInput, useLoad, useToast } from '../components/ui';
 import { useSession } from '../session';
+import { OfferCard } from './SalesKit';
 
 type Counts = { known: boolean; physical_on_hand: number | null; available: number | null; reserved: number | null; committed: number | null; inspection_maintenance: number | null };
 type Product = {
@@ -159,6 +160,7 @@ export function ProductDetailPage() {
         {([['Físico em loja', d.counts.physical_on_hand], ['Disponível', d.counts.available], ['Reservado', d.counts.reserved], ['Vendido p/ entrega', d.counts.committed], ['Inspeção/manutenção', d.counts.inspection_maintenance]] as const).map(([k, v]) => (
           <div className="stat" key={k}><div className="k">{k}</div><div className="v">{d.counts.known ? v : '—'}</div></div>))}
       </div>
+      {d.active && <OfferCard name={d.name} priceCents={d.sale_price_cents} available={d.counts.known ? d.counts.available : null} color={d.color} size={d.size} brand={d.brand} />}
       <div className="grid-2">
         <section className="card">
           <div className="card-head"><h2>Produto</h2></div>

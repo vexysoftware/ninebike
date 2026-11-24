@@ -62,7 +62,7 @@ function EnvBadge() {
 
 export function ThemeToggle() {
   const [pref, setPref] = useState<ThemePref>(getThemePref());
-  const next: Record<ThemePref, ThemePref> = { system: 'light', light: 'dark', dark: 'system' };
+  const next: Record<ThemePref, ThemePref> = { dark: 'light', light: 'system', system: 'dark' };
   const label = { system: 'Tema: Sistema', light: 'Tema: Claro', dark: 'Tema: Escuro' }[pref];
   return (
     <button className="btn btn-ghost btn-sm" onClick={() => { const n = next[pref]; applyTheme(n); setPref(n); }} aria-label={`${label}. Alternar tema`}>
@@ -75,7 +75,7 @@ export function PageHead({ title, subtitle, children }: { title: string; subtitl
   useEffect(() => { document.title = `${title} · Ninebike`; }, [title]);
   return (
     <div className="page-head">
-      <div className="grow"><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>
+      <div className="grow"><h1>{title}</h1></div>
       {children}
     </div>
   );

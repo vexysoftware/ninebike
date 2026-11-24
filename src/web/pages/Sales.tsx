@@ -151,7 +151,7 @@ export function QuotePage() {
               <p>Reservado até <strong>{formatInstant(d.reservation!.expires_at)}</strong>{d.reservation!.units?.length ? <> · bikes {d.reservation!.units.join(', ')}</> : null}.</p>
               <button className="btn btn-sm" style={{ marginTop: 12 }} disabled={cmd.busy} onClick={async () => { if (await cmd.run('POST', `/api/v1/quotes/${d.id}/reservation-release`, undefined, { success: 'Reserva liberada.' })) q.reload(); }}>Liberar reserva</button>
             </> : <>
-              <p className="muted">Separa as unidades para este cliente pelo prazo da política. Sem reserva, não confirma pedido.</p>
+
               <button className="btn btn-primary" style={{ marginTop: 12 }} disabled={cmd.busy} onClick={async () => { if (await cmd.run('POST', '/api/v1/reservations', { quote_id: d.id, quote_version: d.version }, { success: 'Estoque reservado.' })) q.reload(); }}>Reservar estoque</button>
             </>}
           </section>

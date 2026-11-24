@@ -41,7 +41,7 @@ export function CommissionsPage() {
 
   return (
     <>
-      <PageHead title="Comissões" subtitle={isOwner ? 'Comissão de cada vendedor, calculada na confirmação do pedido.' : 'Suas comissões por pedido confirmado.'} />
+      <PageHead title="Comissões" subtitle={isOwner ? '' : ''} />
       {rule.data && !rule.data.configured && (
         <div className="alert" role="status" style={{ marginBottom: 16 }}>
           Nenhuma regra de comissão configurada. Pedidos confirmados sem regra não geram comissão (nenhum valor é presumido).
@@ -108,8 +108,6 @@ function RuleCard({ rule, onDone }: { rule: Rule | null; onDone: () => void }) {
   return (
     <section className="card">
       <div className="card-head"><h2>Regra de comissão</h2>{cur ? <Status tone="ok">Versão {cur.version}</Status> : <Status tone="warn">Não configurada</Status>}</div>
-      <p className="muted" style={{ marginBottom: 12 }}>Percentual sobre o valor do pedido sem frete. A nova regra vale para pedidos confirmados a partir de agora; pedidos anteriores mantêm a regra da época.
-        {cur && <> Atual: {pct(cur.default_bps)} padrão.</>}</p>
       <form className="form-grid" onSubmit={async (e) => {
         e.preventDefault();
         const overrides = Object.entries(ov).filter(([, v]) => v.trim() !== '').map(([profile_id, v]) => ({ profile_id, bps: toBps(v) }));
@@ -139,8 +137,7 @@ export function AgentKeysCard() {
   return (
     <section className="card">
       <div className="card-head"><h2>Integração com a IA do WhatsApp</h2></div>
-      <p className="muted" style={{ marginBottom: 12 }}>Chave para o n8n consultar o sistema enquanto a IA responde. Ela só lê catálogo/estoque (sem custo), reconhece o cliente pelo celular e registra leads. Não acessa financeiro, notas fiscais nem custos.
-        Guia de configuração: <code>docs/operations/n8n-ia.md</code>.</p>
+      <p className="subtle" style={{ marginBottom: 12 }}>Catálogo, cliente e leads. Sem custo, financeiro ou fiscal.</p>
       {token && (
         <div className="alert" role="status" style={{ marginBottom: 12 }}>
           <strong>Copie agora — a chave não será mostrada de novo.</strong>

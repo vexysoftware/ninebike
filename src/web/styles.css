@@ -206,3 +206,7 @@ details.more summary { cursor: pointer; font-size: var(--text-sm); font-weight: 
 .timeline li { display: grid; grid-template-columns: 20px 1fr; gap: var(--space-3); font-size: var(--text-sm); }
 .timeline .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--control-border); margin-top: 6px; justify-self: center; }
 .unit-row { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
+
+.offer-preview { white-space: pre-wrap; font-family: inherit; background: var(--surface-2, var(--bg)); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin: 0; line-height: 1.5; }
+.stat-link { text-decoration: none; color: inherit; transition: border-color .15s; }
+.stat-link:hover { border-color: var(--accent, var(--line)); }

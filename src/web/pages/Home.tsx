@@ -2,84 +2,80 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { HttpError, api, describeError, supabase } from '../api';
 import { PageHead, useCommand } from '../components/Shell';
-import { Dialog, Empty, ErrorBox, Field, Icon, Loading, Status, formatCents, formatInstant, formatPhone, useLoad } from '../components/ui';
+import { Dialog, Empty, ErrorBox, Field, Icon, Loading, Status, formatCents, formatInstant, formatPhone, useLoad, waLink } from '../components/ui';
 import { useSession } from '../session';
 import { MfaPrompt } from './Auth';
 import { FiscalSettingsCard } from './Fiscal';
 import { AgentKeysCard } from './Commissions';
+import { FollowupsCard } from './SalesKit';
 
 export function HomePage() {
   const { session } = useSession();
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
   const tomorrow = new Date(Date.parse(`${today}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
   const agenda = useLoad(() => api.get<Array<{ id: string; body: string; due_at: string; opportunity_id: string | null; contact_id: string; contact_name: string }>>('/api/v1/activities/agenda'), []);
-  const board = useLoad(() => api.get<Array<{ id: string; name: string; kind: string; total: number }>>('/api/v1/pipeline-stages?limit=1'), []);
   const bdays = useLoad(() => api.get<{ data: Array<{ contact_id: string; name: string; mobile_phone: string }> }>(`/api/v1/contacts/birthdays?from=${today}&to=${tomorrow}`), []);
   const dash = useLoad(() => api.get<Dashboard>('/api/v1/dashboard'), []);
   const now = Date.now();
   const d = dash.data;
   const isOwner = session?.profile === 'OWNER';
+  const growth = d && d.previous_month.total_cents !== '0'
+    ? Math.round((Number(d.month.total_cents) / Number(d.previous_month.total_cents) - 1) * 100) : null;
+  const Stat = ({ to, k, v, sub }: { to?: string; k: string; v: string | number; sub?: React.ReactNode }) => {
+    const inner = <><div className="k">{k}</div><div className={`v${typeof v === 'string' && v.startsWith('R$') ? ' money' : ''}`}>{v}</div>{sub && <div className="subtle">{sub}</div>}</>;
+    return to ? <Link to={to} className="stat stat-link">{inner}</Link> : <div className="stat">{inner}</div>;
+  };
   return (
     <>
-      <PageHead title={`Olá, ${session?.name.split(' ')[0]}`} subtitle={session?.profile === 'OWNER' ? 'Visão da loja inteira.' : 'Sua carteira de clientes.'} />
+      <PageHead title={`Olá, ${session?.name.split(' ')[0]}`}>
+        <Link to="/app/propostas/nova" className="btn btn-primary"><Icon name="plus" /> Nova proposta</Link>
+      </PageHead>
       {d && (
         <div className="stats">
-          <Link to="/app/vendas" className="stat" style={{ textDecoration: 'none', color: 'inherit' }}>
-            <div className="k">{isOwner ? 'Vendas no mês' : 'Minhas vendas no mês'}</div><div className="v money">{formatCents(d.month.total_cents)}</div>
-            <div className="subtle">{d.month.orders} pedido(s) · mês passado {formatCents(d.previous_month.total_cents)}</div></Link>
-          <div className="stat"><div className="k">Ticket médio</div><div className="v money">{formatCents(d.month.average_cents)}</div></div>
-          <Link to="/app/comissoes" className="stat" style={{ textDecoration: 'none', color: 'inherit' }}>
-            <div className="k">Minha comissão no mês</div><div className="v money">{d.commission_configured ? formatCents(d.my_commission_cents) : '—'}</div>
-            {!d.commission_configured && <div className="subtle">Regra não configurada</div>}</Link>
-          <Link to="/app/pipeline" className="stat" style={{ textDecoration: 'none', color: 'inherit' }}>
-            <div className="k">Leads novos (7 dias)</div><div className="v">{d.new_leads_7d}</div><div className="subtle">site + IA do WhatsApp</div></Link>
-          {isOwner && d.fiscal_pending_review != null && (
-            <Link to="/app/notas" className="stat" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div className="k">Notas aguardando revisão</div><div className="v">{d.fiscal_pending_review}</div></Link>)}
+          <Stat to="/app/vendas" k={isOwner ? 'Vendas no mês' : 'Minhas vendas'} v={formatCents(d.month.total_cents)}
+            sub={<>{d.month.orders} pedido(s){growth !== null && <> · <span style={{ color: growth >= 0 ? 'var(--ok, #4caf50)' : 'var(--danger, #e5484d)' }}>{growth >= 0 ? '▲' : '▼'} {Math.abs(growth)}%</span></>}</>} />
+          <Stat k="Ticket médio" v={formatCents(d.month.average_cents)} />
+          <Stat to="/app/comissoes" k="Minha comissão" v={d.commission_configured ? formatCents(d.my_commission_cents) : '—'} />
+          <Stat to="/app/pipeline" k="Leads (7 dias)" v={d.new_leads_7d} />
+          {isOwner && d.fiscal_pending_review ? <Stat to="/app/notas" k="Notas p/ revisar" v={d.fiscal_pending_review} /> : null}
         </div>)}
-      {d && (isOwner || d.low_stock.length > 0) && (
-        <div className="grid-2">
-          {isOwner && (
-            <section className="card">
-              <div className="card-head"><h2>Ranking do mês</h2><Link to="/app/comissoes" className="subtle">Comissões</Link></div>
-              {!d.ranking?.length ? <Empty title="Nenhuma venda neste mês ainda." /> : (
-                <ol className="timeline">{d.ranking.map((r, i) => (
-                  <li key={i}><span className="dot" /><div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                    <span>{i + 1}º {r.seller_name} <span className="subtle">· {r.orders} pedido(s)</span></span><strong>{formatCents(r.total)}</strong></div></li>))}</ol>)}
-            </section>)}
-          <section className="card">
-            <div className="card-head"><h2>Estoque baixo</h2><Link to="/app/estoque" className="subtle">Estoque</Link></div>
-            {!d.low_stock.length ? <Empty title="Nenhum item abaixo do mínimo." /> : (
-              <ul className="timeline">{d.low_stock.slice(0, 12).map((x) => (
-                <li key={x.id}><span className="dot" /><div><Link to={`/app/estoque/${x.id}`}>{x.name}</Link>{' '}
-                  <Status tone={x.available === 0 ? 'danger' : 'warn'}>{x.available === 0 ? 'Esgotado' : `${x.available} disponível(is)`}</Status>
-                  {x.minimum > 0 && <span className="subtle"> · mínimo {x.minimum}</span>}</div></li>))}</ul>)}
-          </section>
-        </div>)}
-      <h2 className="subtle" style={{ fontSize: 14, margin: '8px 0' }}>Pipeline</h2>
-      <div className="stats">
-        {board.loading ? <Loading rows={1} /> : board.data?.map((s) => (
-          <Link key={s.id} to="/app/pipeline" className="stat" style={{ textDecoration: 'none', color: 'inherit' }}>
-            <div className="k">{s.name}</div><div className="v">{s.total}</div></Link>))}
-      </div>
       <div className="grid-2">
+        <FollowupsCard />
         <section className="card">
-          <div className="card-head"><h2>Próximos retornos</h2><Link to="/app/pipeline" className="subtle">Pipeline</Link></div>
-          {agenda.loading ? <Loading /> : agenda.error ? <ErrorBox error={agenda.error} onRetry={agenda.reload} /> : !agenda.data?.length ? <Empty title="Nenhum retorno agendado." /> : (
+          <div className="card-head"><h2>Retornos agendados</h2></div>
+          {agenda.loading ? <Loading /> : agenda.error ? <ErrorBox error={agenda.error} onRetry={agenda.reload} /> : !agenda.data?.length ? <Empty title="Nada agendado." /> : (
             <ul className="timeline">{agenda.data.map((a) => (
               <li key={a.id}><span className="dot" /><div>
                 <Link to={a.opportunity_id ? `/app/pipeline?abrir=${a.opportunity_id}` : `/app/contatos/${a.contact_id}`}>{a.contact_name}</Link> — {a.body}
                 <div>{Date.parse(a.due_at) < now ? <Status tone="danger">Atrasado · {formatInstant(a.due_at)}</Status> : <span className="subtle">{formatInstant(a.due_at)}</span>}</div>
-              </div></li>))}</ul>
-          )}
+              </div></li>))}</ul>)}
         </section>
+      </div>
+      <div className="grid-2">
+        {isOwner && d && (
+          <section className="card">
+            <div className="card-head"><h2>Ranking do mês</h2></div>
+            {!d.ranking?.length ? <Empty title="Sem vendas ainda." /> : (
+              <ol className="timeline">{d.ranking.map((r, i) => (
+                <li key={i}><span className="dot" /><div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                  <span>{['🥇', '🥈', '🥉'][i] ?? `${i + 1}º`} {r.seller_name} <span className="subtle">· {r.orders}</span></span><strong>{formatCents(r.total)}</strong></div></li>))}</ol>)}
+          </section>)}
         <section className="card">
-          <div className="card-head"><h2>Aniversariantes de hoje</h2><Link to="/app/aniversariantes" className="subtle">Ver todos</Link></div>
-          {bdays.loading ? <Loading /> : !bdays.data?.data.length ? <Empty title="Nenhum aniversariante hoje." /> : (
+          <div className="card-head"><h2>Aniversariantes 🎂</h2><Link to="/app/aniversariantes" className="subtle">Todos</Link></div>
+          {bdays.loading ? <Loading /> : !bdays.data?.data.length ? <Empty title="Ninguém hoje." /> : (
             <ul className="timeline">{bdays.data.data.map((b) => (
-              <li key={b.contact_id}><span className="dot" /><div><Link to={`/app/contatos/${b.contact_id}`}>{b.name}</Link> <span className="subtle">{formatPhone(b.mobile_phone)}</span></div></li>))}</ul>
-          )}
+              <li key={b.contact_id}><span className="dot" /><div style={{ display: 'flex', gap: 8, alignItems: 'center', width: '100%' }}>
+                <Link to={`/app/contatos/${b.contact_id}`} style={{ flex: 1 }}>{b.name}</Link>
+                <a className="btn btn-sm" target="_blank" rel="noreferrer" href={`${waLink(b.mobile_phone)}?text=${encodeURIComponent(`Parabéns, ${b.name.split(' ')[0]}! 🎉 A Ninebike te deseja um ano incrível. Passa aqui na loja que tem um presente pra você! 🚲⚡`)}`}>Parabenizar</a>
+              </div></li>))}</ul>)}
         </section>
+        {d && d.low_stock.length > 0 && (
+          <section className="card">
+            <div className="card-head"><h2>Repor estoque</h2><Link to="/app/estoque" className="subtle">Estoque</Link></div>
+            <ul className="timeline">{d.low_stock.slice(0, 8).map((x) => (
+              <li key={x.id}><span className="dot" /><div><Link to={`/app/estoque/${x.id}`}>{x.name}</Link>{' '}
+                <Status tone={x.available === 0 ? 'danger' : 'warn'}>{x.available === 0 ? 'Esgotado' : `${x.available} un.`}</Status></div></li>))}</ul>
+          </section>)}
       </div>
     </>
   );
@@ -184,7 +180,7 @@ export function SettingsPage() {
         </section>
         <section className="card">
           <div className="card-head"><h2>Leads do site</h2></div>
-          <p className="muted" style={{ marginBottom: 12 }}>Quem recebe os contatos enviados pelo formulário público. Sem responsável, o formulário fica indisponível.</p>
+
           {settings.data && users.data && (
             <Field label="Responsável pelos novos leads">{(p) => (
               <select {...p} className="input" value={settings.data!.default_lead_owner_id ?? ''} onChange={async (e) => {
@@ -222,7 +218,7 @@ function InviteDialog({ open, onClose, onDone, sensitive }: { open: boolean; onC
           return mfa ? 'MFA' : r;
         });
       }}>
-        <p className="muted">Cada pessoa tem login próprio. O perfil define o que ela vê e faz; vendedores não acessam financeiro, custos nem administração.</p>
+
         <Field label="Nome">{(p) => <input {...p} className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />}</Field>
         <Field label="E-mail">{(p) => <input {...p} className="input" type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />}</Field>
         <Field label="Perfil">{(p) => <select {...p} className="input" value={f.profile} onChange={(e) => setF({ ...f, profile: e.target.value })}><option value="SELLER">Vendedor</option><option value="OWNER">Proprietário</option></select>}</Field>
@@ -241,7 +237,7 @@ function MfaEnrollCard() {
   return (
     <section className="card">
       <div className="card-head"><h2>Segundo fator (TOTP)</h2>{verified && <Status tone="ok">Ativo</Status>}</div>
-      <p className="muted">Proprietários precisam do aplicativo autenticador para convites, troca de perfil e, futuramente, atos financeiros.</p>
+
       {!verified && !qr && <button className="btn" style={{ marginTop: 12 }} onClick={async () => {
         const { data, error } = await supabase!.auth.mfa.enroll({ factorType: 'totp' });
         if (error || !data) return setMsg('Não foi possível iniciar o cadastro.');
@@ -270,7 +266,7 @@ function PolicyCard() {
   return (
     <section className="card">
       <div className="card-head"><h2>Política comercial</h2>{p ? <Status tone="ok">Revisão {p.revision}</Status> : <Status tone="warn">Não configurada</Status>}</div>
-      <p className="muted" style={{ marginBottom: 12 }}>Sem política, não há reserva nem proposta. Cada alteração cria uma nova revisão; propostas antigas mantêm a regra da época.</p>
+
       {p && <p style={{ marginBottom: 12 }}>Reserva {p.reservation_minutes / 60} h · validade da proposta {p.quote_validity_minutes / 1440} dia(s) · desconto da vendedora até {p.seller_max_discount_bps / 100}%</p>}
       <form className="form-grid" onSubmit={async (e) => {
         e.preventDefault();

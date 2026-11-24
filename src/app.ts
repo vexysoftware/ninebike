@@ -128,6 +128,10 @@ const page = (c: Ctx, data: unknown[], next: string | null) =>
 // ---------------------------------------------------------------- sessão e administração
 route('GET', '/api/v1/session', async (c) => ok(c, { ...(await q<object>(c, 'session')), mfa_recent: (await principal(c)).mfaRecent }));
 
+route('GET', '/api/v1/followups', async (c) => {
+  const d = Number(c.url.searchParams.get('days') ?? 3);
+  return ok(c, await q(c, 'followups', [Number.isInteger(d) && d > 0 && d < 365 ? d : 3]));
+});
 route('GET', '/api/v1/dashboard', async (c) => ok(c, await q(c, 'dashboard')));
 
 route('GET', '/api/v1/admin/users', async (c) => ok(c, await q(c, 'admin_list_users')));

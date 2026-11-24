@@ -1,6 +1,6 @@
 export type ThemePref = 'light' | 'dark' | 'system';
 const KEY = 'nb-theme';
-let memory: ThemePref = 'system';
+let memory: ThemePref = 'dark';
 const mq = typeof window !== 'undefined' ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 
 export function getThemePref(): ThemePref {

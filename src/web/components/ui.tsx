@@ -23,6 +23,9 @@ const paths: Record<string, ReactNode> = {
   logout: <path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 16l-4-4 4-4M6 12h10" />,
   list: <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />,
   check: <path d="M5 12l5 5 9-10" />,
+  send: <path d="M21 3L10 14M21 3l-7 18-4-7-7-4z" />,
+  money: <><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="2.5" /></>,
+  receipt: <path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6" />,
 };
 export function Icon({ name, label }: { name: keyof typeof paths | string; label?: string }) {
   return (
