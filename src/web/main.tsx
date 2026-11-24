@@ -15,6 +15,7 @@ import { HomePage, SettingsPage } from './pages/Home';
 import { FiscalDocumentPage, FiscalListPage } from './pages/Fiscal';
 import { CommissionsPage } from './pages/Commissions';
 import { FinancePage } from './pages/Finance';
+import { AIResultsPage, VisitsPage } from './pages/AI';
 import { OrderPage, QuoteEditorPage, QuotePage, SalesPage } from './pages/Sales';
 
 function RequireSession({ children, permission }: { children: ReactNode; permission?: string }) {
@@ -51,6 +52,8 @@ createRoot(document.getElementById('root')!).render(
               <Route path="estoque" element={<InventoryPage />} />
               <Route path="estoque/:id" element={<ProductDetailPage />} />
               <Route path="fornecedores" element={<RequireSession permission="suppliers.read"><SuppliersPage /></RequireSession>} />
+              <Route path="visitas" element={<VisitsPage />} />
+              <Route path="ia" element={<RequireSession permission="finance.manage"><AIResultsPage /></RequireSession>} />
               <Route path="financeiro" element={<RequireSession permission="finance.manage"><FinancePage /></RequireSession>} />
               <Route path="configuracoes" element={<RequireSession permission="users.manage"><SettingsPage /></RequireSession>} />
             </Route>

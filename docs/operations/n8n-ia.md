@@ -167,3 +167,59 @@ return $input.all();
   - expira reservas vencidas, devolvendo a bike ao estoque;
   - entrega os webhooks pendentes;
   - limpa registros técnicos antigos.
+
+## 9. Autonomia da IA: visitas e cobranças
+
+Essas rotas exigem permissões que precisam ser marcadas na chave:
+- `visits.write`: agendar visitas;
+- `payments.write`: registrar Pix e links de pagamento.
+
+Tudo o que a IA faz fica auditado.
+
+### Agendar visita
+
+```
+POST /agent/v1/visits
+{ "event_id": "<uuid estável>", "mobile_phone": "{{ $json.from }}", "name": "{{ $json.pushName }}",
+  "scheduled_at": "2026-11-26T14:00:00-03:00", "note": "Quer testar aro 29", "interest_product_id": "<opcional>" }
+```
+
+- Cria o cliente se ele ainda não existir.
+- Cria uma tarefa para o vendedor no horário da visita.
+- Dispara o webhook `visit.scheduled`.
+
+Para remarcar ou cancelar, use `PATCH /agent/v1/visits/{id}` com `{ "scheduled_at": "…" }` ou `{ "state": "CANCELLED" }`. A IA só pode fazer isso enquanto a visita estiver agendada. O comparecimento é marcado pela loja, na tela **Visitas**.
+
+### Pix e link gerados pela IA
+
+Registre logo depois de gerar a cobrança no provedor:
+
+```
+POST /agent/v1/charges
+{ "event_id": "<uuid>", "mobile_phone": "{{ $json.from }}", "name": "…", "kind": "PIX" | "LINK",
+  "provider": "asaas", "external_id": "pay_123", "amount_cents": "50000", "description": "Sinal bike X",
+  "url": "https://…" }
+```
+
+Quando o provedor avisar o pagamento (webhook do provedor → n8n), informe:
+
+```
+POST /agent/v1/charges/status
+{ "provider": "asaas", "external_id": "pay_123", "state": "PAID_REPORTED" }
+```
+
+O `state` também aceita `EXPIRED` e `CANCELLED`.
+
+Antes de gerar uma nova cobrança, consulte `GET /agent/v1/charges?phone=…` para não duplicar.
+
+O pagamento informado pela IA fica **"a confirmar"**. O dono confere no banco e clica **Caiu na conta** (ou **Não caiu**) em **Resultados da IA**. Só o valor confirmado entra na comissão confirmada.
+
+### Atribuição e comissão da IA
+
+Um cliente passa a ser "trazido pela IA" quando a IA cria o lead, agenda a visita ou gera a cobrança. Isso não vale para cliente que já tinha comprado antes na loja.
+
+Base da comissão:
+- vendas (sem frete) desses clientes confirmadas dentro da janela configurada (padrão de 90 dias desde o primeiro contato);
+- mais as cobranças da IA pagas e confirmadas que não viraram pedido.
+
+O percentual e a janela são definidos pelo dono em **Resultados da IA**. O dono também pode **contestar** um cliente, com motivo registrado.

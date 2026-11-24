@@ -126,7 +126,7 @@ function RuleCard({ rule, onDone }: { rule: Rule | null; onDone: () => void }) {
 }
 
 type AgentClient = { id: string; name: string; token_prefix: string; scopes: string[]; created_at: string; created_by_name: string; revoked_at: string | null; last_used_at: string | null; requests_24h: number; allowed_ips: string[]; expires_at: string | null };
-const SCOPES = [['catalog.read', 'Consultar produtos, preço e estoque'], ['customers.read', 'Reconhecer cliente pelo celular'], ['leads.write', 'Registrar lead e anotações no CRM']] as const;
+const SCOPES = [['catalog.read', 'Consultar produtos, preço e estoque'], ['customers.read', 'Reconhecer cliente pelo celular'], ['leads.write', 'Registrar lead e anotações no CRM'], ['visits.write', 'Agendar visitas na loja'], ['payments.write', 'Registrar Pix/links gerados e pagos']] as const;
 
 export function AgentKeysCard() {
   const list = useLoad(() => api.get<AgentClient[]>('/api/v1/admin/agent-clients'), []);
@@ -181,7 +181,7 @@ export function AgentKeysCard() {
 }
 
 type Webhook = { id: string; name: string; url: string; events: string[]; active: boolean; last_success_at: string | null; last_error: string | null; pending: number; failed_7d: number };
-const EVENTS = [['lead.created', 'Lead novo'], ['order.confirmed', 'Venda confirmada'], ['order.cancelled', 'Venda cancelada'], ['fiscal.ready_for_review', 'Nota pronta p/ revisão']] as const;
+const EVENTS = [['lead.created', 'Lead novo'], ['order.confirmed', 'Venda confirmada'], ['order.cancelled', 'Venda cancelada'], ['fiscal.ready_for_review', 'Nota pronta p/ revisão'], ['visit.scheduled', 'Visita agendada'], ['charge.paid_reported', 'Pagamento informado']] as const;
 
 export function WebhooksCard() {
   const list = useLoad(() => api.get<Webhook[]>('/api/v1/admin/webhooks'), []);

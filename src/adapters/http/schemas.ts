@@ -301,10 +301,10 @@ const ip: Parser<string> = (v, path) => {
   return s.toLowerCase();
 };
 export const agentClientCreate = object({ name: req(string({ min: 1, max: 80 })),
-  scopes: req(array(enumOf('catalog.read', 'customers.read', 'leads.write'), { min: 1, max: 3 })),
+  scopes: req(array(enumOf('catalog.read', 'customers.read', 'leads.write', 'visits.write', 'payments.write'), { min: 1, max: 5 })),
   allowed_ips: opt(array(ip, { max: 20 })), expires_in_days: opt(nullable(int({ min: 1, max: 730 }))) });
 export const webhookCreate = object({ name: req(string({ min: 1, max: 80 })), url: req(string({ min: 10, max: 500 })),
-  events: req(array(enumOf('lead.created', 'order.confirmed', 'order.cancelled', 'fiscal.ready_for_review'), { min: 1, max: 4 })) });
+  events: req(array(enumOf('lead.created', 'order.confirmed', 'order.cancelled', 'fiscal.ready_for_review', 'visit.scheduled', 'charge.paid_reported'), { min: 1, max: 6 })) });
 export const webhookActive = object({ active: req(boolean) });
 export const agentLead = object({ event_id: req(uuid), name: req(name), mobile_phone: req(string({ min: 8, max: 30 })),
   note: opt(optionalText(2000)), interest_product_id: opt(nullable(uuid)) });
@@ -321,3 +321,18 @@ export const expenseCancel = object({ expected_version: req(positiveInt), reason
 export const expensePay = object({ expected_version: req(positiveInt), amount_cents: req(moneyCents), paid_on: req(date),
   method: req(enumOf('PIX', 'BOLETO', 'CARD', 'CASH', 'TRANSFER', 'OTHER')), note: opt(optionalText(300)) });
 export const expenseReverse = object({ reason: req(string({ min: 1, max: 300 })) });
+
+// ---------------------------------------------------------------- IA: visitas, cobranças e atribuição
+export const agentVisit = object({ event_id: req(uuid), mobile_phone: req(string({ min: 8, max: 40 })), name: opt(name),
+  scheduled_at: req(instant), note: opt(optionalText(1000)), interest_product_id: opt(nullable(uuid)) });
+export const agentVisitPatch = object({ scheduled_at: opt(instant), state: opt(enumOf('CANCELLED')), note: opt(optionalText(1000)) });
+export const visitState = object({ expected_version: req(positiveInt), state: req(enumOf('SCHEDULED', 'ATTENDED', 'NO_SHOW', 'CANCELLED')) });
+export const agentCharge = object({ event_id: req(uuid), mobile_phone: req(string({ min: 8, max: 40 })), name: opt(name),
+  kind: req(enumOf('PIX', 'LINK')), provider: req(string({ min: 1, max: 40 })), external_id: opt(optionalText(120)),
+  amount_cents: req(moneyCents), description: req(string({ min: 1, max: 300 })), url: opt(optionalText(1000)), product_id: opt(nullable(uuid)) });
+export const agentChargeUpdate = object({ id: opt(uuid), provider: opt(string({ min: 1, max: 40 })), external_id: opt(string({ min: 1, max: 120 })),
+  state: req(enumOf('PAID_REPORTED', 'EXPIRED', 'CANCELLED')), paid_at: opt(instant), paid_amount_cents: opt(moneyCents) });
+export const aiChargeReview = object({ expected_version: req(positiveInt), confirmation: req(enumOf('CONFIRMED', 'REJECTED')),
+  order_id: opt(nullable(uuid)), note: opt(optionalText(300)) });
+export const aiCommissionRule = object({ expected_version: req(nonNegativeInt), bps: req(int({ min: 0, max: 5000 })), window_days: req(int({ min: 1, max: 730 })) });
+export const reasonOnly = object({ reason: req(string({ min: 1, max: 300 })) });

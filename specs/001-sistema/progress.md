@@ -157,6 +157,31 @@ Segurança:
 - Chave da IA com lista de IPs permitidos (lidos de `cf-connecting-ip`) e validade.
 - Limite por usuário humano de 600 requisições por minuto (resposta 429).
 
+## IA: visitas, cobranças e comissão da operadora — 25/11/2026
+
+**Decisão do responsável:** a IA tem autonomia para registrar visitas e cobranças (Pix/link), e as vendas de clientes trazidos por ela formam a base de comissão da operadora da IA.
+
+**Código verificado** (`tests/db/ai-visits-charges.test.ts`)
+- Escopos novos `visits.write` e `payments.write`.
+- Visitas:
+  - criadas pela IA, com cliente e tarefa automáticos e idempotência;
+  - a IA pode remarcar ou cancelar só visita ainda agendada;
+  - comparecimento ou não comparecimento é marcado pela loja.
+- Cobranças da IA:
+  - registro da cobrança, depois "pago (informado)" por id ou por provider + external_id, com repetição tolerada;
+  - conferência do dono ("caiu na conta" ou "não caiu");
+  - tarefa automática para conferir.
+- Atribuição de cliente à IA:
+  - motivo do primeiro contato: lead, visita ou cobrança;
+  - cliente com compra anterior não é reivindicado;
+  - o dono pode contestar, com motivo.
+- Relatório "Resultados da IA":
+  - vendas atribuídas dentro da janela, mais cobranças pagas sem pedido;
+  - comissão confirmada separada de comissão a confirmar;
+  - regra versionada (percentual e janela) definida pelo dono com MFA.
+
+**Limites:** a IA não aprova nota, não cancela venda, não altera preço, estoque ou usuários e não apaga nada.
+
 ## Próximas
 
 T10 (despesas, contas a pagar/receber gerenciais, DRE com completude) e T16 em rascunho; T13 importação dos CSVs; T06 só quando existir o primeiro efeito externo. T07–T09/T15 aguardam o PSP; T12 após T14.

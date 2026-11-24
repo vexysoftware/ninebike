@@ -454,6 +454,48 @@ route('POST', '/agent/v1/leads', async (c) => {
   return ok(c, r, r.replayed ? 200 : 201);
 });
 
+// ---------------------------------------------------------------- IA: visitas e cobranças (rotas da chave)
+async function hashed(args: Record<string, unknown>) { return { ...args, request_hash: await sha256Hex(canonical(args)) }; }
+route('POST', '/agent/v1/visits', async (c) => {
+  const p = await body(c, S.agentVisit);
+  const args = { event_id: p.event_id.toLowerCase(), mobile_e164: agentPhone(p.mobile_phone, 'mobile_phone'), name: p.name?.trim() ?? null,
+    scheduled_at: p.scheduled_at, note: p.note ?? null, interest_product_id: p.interest_product_id ?? null };
+  const r = await aq(c, 'agent_visit_create', [await hashed(args)]) as { replayed: boolean };
+  return ok(c, r, r.replayed ? 200 : 201);
+});
+route('PATCH', '/agent/v1/visits/{id}', async (c) => ok(c, await aq(c, 'agent_visit_update', [c.params.id, await body(c, S.agentVisitPatch)])));
+route('POST', '/agent/v1/charges', async (c) => {
+  const p = await body(c, S.agentCharge);
+  if (p.url && !/^https:\/\//.test(p.url)) throw fieldError('url', 'https_required');
+  const args = { event_id: p.event_id.toLowerCase(), mobile_e164: agentPhone(p.mobile_phone, 'mobile_phone'), name: p.name?.trim() ?? null,
+    kind: p.kind, provider: p.provider.trim().toLowerCase(), external_id: p.external_id ?? null, amount_cents: p.amount_cents,
+    description: p.description.trim(), url: p.url ?? null, product_id: p.product_id ?? null };
+  const r = await aq(c, 'agent_charge_create', [await hashed(args)]) as { replayed: boolean };
+  return ok(c, r, r.replayed ? 200 : 201);
+});
+route('POST', '/agent/v1/charges/status', async (c) => {
+  const p = await body(c, S.agentChargeUpdate);
+  if (!p.id && !(p.provider && p.external_id)) throw fieldError('id', 'id_or_provider_external_id_required');
+  return ok(c, await aq(c, 'agent_charge_update', [{ ...p, provider: p.provider?.trim().toLowerCase() }]));
+});
+route('GET', '/agent/v1/charges', async (c) => ok(c, await aq(c, 'agent_charge_list', [agentPhone(c.url.searchParams.get('phone') ?? '', 'phone')])));
+
+// ---------------------------------------------------------------- visitas, cobranças da IA e relatório (humanos)
+function rangeParams(c: Ctx) {
+  const from = c.url.searchParams.get('from'); const to = c.url.searchParams.get('to');
+  return { from: from ? `${date(from, 'from')}T03:00:00Z` : null, to: to ? `${date(to, 'to')}T03:00:00Z` : null };
+}
+route('GET', '/api/v1/visits', async (c) => {
+  const st = c.url.searchParams.get('state');
+  return ok(c, await q(c, 'visit_list', [{ ...rangeParams(c), state: st && ['SCHEDULED', 'ATTENDED', 'NO_SHOW', 'CANCELLED'].includes(st) ? st : null }]));
+});
+route('POST', '/api/v1/visits/{id}/state', async (c) => command(c, 'visit.state', 'visit_set_state', [c.params.id, await body(c, S.visitState)]));
+route('GET', '/api/v1/ai-charges', async (c) => ok(c, await q(c, 'ai_charge_list', [rangeParams(c)])));
+route('POST', '/api/v1/ai-charges/{id}/review', async (c) => command(c, 'ai_charge.review', 'ai_charge_review', [c.params.id, await body(c, S.aiChargeReview)]));
+route('GET', '/api/v1/reports/ai', async (c) => ok(c, await q(c, 'ai_report', [rangeParams(c)])));
+route('POST', '/api/v1/admin/ai-commission-rules', async (c) => command(c, 'ai_commission.rule', 'ai_commission_rule_create', [await body(c, S.aiCommissionRule)], 201));
+route('POST', '/api/v1/ai-attributions/{id}/removal', async (c) => command(c, 'ai_attribution.remove', 'ai_attribution_remove', [c.params.id, await body(c, S.reasonOnly)]));
+
 // ---------------------------------------------------------------- webhooks de saída (n8n etc.)
 route('GET', '/api/v1/admin/webhooks', async (c) => ok(c, await q(c, 'webhook_list')));
 route('POST', '/api/v1/admin/webhooks', async (c) => {
