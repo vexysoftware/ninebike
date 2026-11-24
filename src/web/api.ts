@@ -64,7 +64,7 @@ async function request<T>(method: string, path: string, body?: unknown, key?: st
     if (res.status === 401) onAuthLost();
     throw new HttpError(res.status, json.code ?? 'INTERNAL_ERROR', json.message ?? 'Erro inesperado.', json.details ?? {});
   }
-  return json;
+  return json as { data: T } & Record<string, unknown>;
 }
 
 export const api = {
