@@ -1,10 +1,10 @@
 // Vercel Function (Node): /api/v1, /public/v1 e /agent/v1 chegam aqui por rewrite (vercel.json) com o caminho em __route.
-import { createApp } from '../src/app';
-import { buildDeps } from '../src/runtime';
-import { runtimeEnv } from './_env';
+import { createApp } from '../src/app.js';
+import { buildDeps } from '../src/runtime.js';
+import { runtimeEnv } from './_env.js';
 import { waitUntil } from '@vercel/functions';
-import { Db, createSql } from '../src/adapters/persistence/db';
-import { deliverOutbox } from '../src/modules/integrations/webhooks';
+import { Db, createSql } from '../src/adapters/persistence/db.js';
+import { deliverOutbox } from '../src/modules/integrations/webhooks.js';
 
 export const config = { maxDuration: 30 };
 

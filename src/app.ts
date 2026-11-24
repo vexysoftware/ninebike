@@ -1,12 +1,12 @@
 // Composição HTTP /api/v1 (e captura pública). Sem dependência do runtime: recebe as portas prontas.
-import { ApiError, fieldError } from './adapters/http/errors';
-import { authenticate, type AuthConfig, type Principal } from './adapters/http/auth';
-import { Db, type CommandCtx } from './adapters/persistence/db';
-import { sniffImage, type AuthAdmin, type FileStorage } from './adapters/providers/supabase';
-import * as S from './adapters/http/schemas';
-import { date, isUuid, type Parser } from './adapters/http/validate';
-import { isSafeWebhookUrl } from './modules/integrations/webhooks';
-import { normalizeBrMobile, normalizeCnpj, normalizeEmail } from './modules/crm/contact-rules';
+import { ApiError, fieldError } from './adapters/http/errors.js';
+import { authenticate, type AuthConfig, type Principal } from './adapters/http/auth.js';
+import { Db, type CommandCtx } from './adapters/persistence/db.js';
+import { sniffImage, type AuthAdmin, type FileStorage } from './adapters/providers/supabase.js';
+import * as S from './adapters/http/schemas.js';
+import { date, isUuid, type Parser } from './adapters/http/validate.js';
+import { isSafeWebhookUrl } from './modules/integrations/webhooks.js';
+import { normalizeBrMobile, normalizeCnpj, normalizeEmail } from './modules/crm/contact-rules.js';
 
 export type AppDeps = {
   db: Db;

@@ -1,8 +1,8 @@
 // Montagem das dependências a partir das variáveis de ambiente — comum ao Cloudflare Worker e à Vercel.
-import type { AppDeps } from './app';
-import { Db, createSql, type Sql } from './adapters/persistence/db';
-import { SupabaseAuthAdmin, SupabaseStorage } from './adapters/providers/supabase';
-import { makeDevLogin } from './dev/dev-login';
+import type { AppDeps } from './app.js';
+import { Db, createSql, type Sql } from './adapters/persistence/db.js';
+import { SupabaseAuthAdmin, SupabaseStorage } from './adapters/providers/supabase.js';
+import { makeDevLogin } from './dev/dev-login.js';
 
 export type RuntimeEnv = {
   ENVIRONMENT: 'local' | 'test' | 'staging' | 'production';

@@ -1,5 +1,5 @@
 // Regras puras do cadastro: celular BR normalizado, CPF/CNPJ com dígito, e-mail simples, aniversário civil.
-import { fieldError } from '../../adapters/http/errors';
+import { fieldError } from '../../adapters/http/errors.js';
 
 /** Normaliza celular brasileiro para E.164 (+55DD9XXXXXXXX). Aceita máscara, DDI opcional e zero de operadora não. */
 export function normalizeBrMobile(input: string, path = 'mobile_phone'): string {

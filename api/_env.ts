@@ -1,5 +1,5 @@
 // Variáveis na Vercel: aceita as da integração Supabase↔Vercel e deriva o que falta.
-import type { RuntimeEnv } from '../src/runtime';
+import type { RuntimeEnv } from '../src/runtime.js';
 
 /** Conexão do backend com o papel restrito ninebike_api pelo pooler do Supabase (transaction mode). */
 export function apiDatabaseUrl(e: NodeJS.ProcessEnv): string | undefined {

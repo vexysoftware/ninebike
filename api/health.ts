@@ -1,6 +1,6 @@
 // Diagnóstico público sem segredos: qual projeto Supabase está configurado e se o banco responde com o papel restrito.
 import postgres from 'postgres';
-import { apiDatabaseUrl } from './_env';
+import { apiDatabaseUrl } from './_env.js';
 
 const refOf = (s?: string) => (s ? (/([a-z0-9]{20})/.exec(s)?.[1] ?? null) : null);
 

@@ -2,7 +2,7 @@
 // convidada/cadastrada no banco local. Em qualquer outro ambiente a rota responde 404 (ver app.ts).
 // No primeiro uso local, sem nenhum OWNER, a primeira pessoa vira OWNER para permitir convidar as demais.
 import { SignJWT } from 'jose';
-import type { Sql } from '../adapters/persistence/db';
+import type { Sql } from '../adapters/persistence/db.js';
 
 export function makeDevLogin(adminSql: Sql, secret: string, issuer: string) {
   return async (email: string) => {

@@ -1,7 +1,7 @@
 // Vercel Cron: manutenção + entrega de webhooks. Protegido por CRON_SECRET (a Vercel envia Authorization: Bearer <CRON_SECRET>).
-import { Db, createSql } from '../src/adapters/persistence/db';
-import { deliverOutbox } from '../src/modules/integrations/webhooks';
-import { apiDatabaseUrl } from './_env';
+import { Db, createSql } from '../src/adapters/persistence/db.js';
+import { deliverOutbox } from '../src/modules/integrations/webhooks.js';
+import { apiDatabaseUrl } from './_env.js';
 
 export const config = { maxDuration: 60 };
 

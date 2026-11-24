@@ -2,11 +2,11 @@
 import {
   array, boolean, boolTrue, date, enumOf, instant, int, moneyCents, nonNegativeInt, nullable, object, opt, optionalText,
   positiveInt, req, string, uuid, type Parser,
-} from './validate';
-import { fieldError } from './errors';
+} from './validate.js';
+import { fieldError } from './errors.js';
 import {
   normalizeBrMobile, normalizeCnpj, normalizeCpf, normalizeEmail, normalizeSerial, todayInSaoPaulo, validateBirthday,
-} from '../../modules/crm/contact-rules';
+} from '../../modules/crm/contact-rules.js';
 
 const name = string({ min: 1, max: 200 });
 const birthday = object({ day: req(int({ min: 1, max: 31 })), month: req(int({ min: 1, max: 12 })), year: opt(nullable(int({ min: 1900, max: 9999 }))) });

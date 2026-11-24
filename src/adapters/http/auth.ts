@@ -1,7 +1,7 @@
 // Valida o JWT do Supabase Auth (assinatura, issuer, audiência, expiração) e deriva a prova de MFA recente.
 // O vínculo/perfil atual é revalidado no banco a cada comando; o token sozinho não concede nada.
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
-import { ApiError } from './errors';
+import { ApiError } from './errors.js';
 
 export type AuthConfig = {
   issuer: string; // ex.: https://<projeto>.supabase.co/auth/v1

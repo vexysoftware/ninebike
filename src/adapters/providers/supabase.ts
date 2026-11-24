@@ -1,5 +1,5 @@
 // Portas para Supabase Storage (bucket privado) e Auth Admin (convites). Chave service_role só no servidor.
-import { ApiError } from '../http/errors';
+import { ApiError } from '../http/errors.js';
 
 export interface FileStorage {
   createSignedUpload(bucket: string, path: string): Promise<{ upload_url: string; token: string }>;

@@ -8,3 +8,4 @@ dist-worker/
 !.env.example
 test-results/
 playwright-report/
+.vercel

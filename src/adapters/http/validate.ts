@@ -1,5 +1,5 @@
 // Validação de payload fechado: campo desconhecido → 422; omitido ≠ null; dinheiro só como string de centavos.
-import { fieldError } from './errors';
+import { fieldError } from './errors.js';
 
 export type Parser<T> = (value: unknown, path: string) => T;
 type Field<T> = { parse: Parser<T>; optional: boolean };

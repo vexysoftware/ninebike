@@ -1,7 +1,7 @@
 // Adaptador PostgreSQL: o Worker só chama funções do schema api (papel ninebike_api).
 // Comandos rodam numa transação única: recibo de idempotência → RPC → gravação do recibo.
 import postgres from 'postgres';
-import { ApiError, fromDbError } from '../http/errors';
+import { ApiError, fromDbError } from '../http/errors.js';
 
 export type Sql = postgres.Sql;
 

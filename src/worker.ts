@@ -1,8 +1,8 @@
 // Entrada do Cloudflare Worker: /api/v1 e /public/v1 vão para a aplicação; o resto é servido pelos assets estáticos (SPA).
-import { createApp } from './app';
-import { buildDeps } from './runtime';
-import { Db, createSql } from './adapters/persistence/db';
-import { deliverOutbox } from './modules/integrations/webhooks';
+import { createApp } from './app.js';
+import { buildDeps } from './runtime.js';
+import { Db, createSql } from './adapters/persistence/db.js';
+import { deliverOutbox } from './modules/integrations/webhooks.js';
 
 export interface Env {
   ASSETS: Fetcher;

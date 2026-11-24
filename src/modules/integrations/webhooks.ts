@@ -1,7 +1,7 @@
 // Entrega da fila de eventos (outbox) aos webhooks cadastrados, com assinatura HMAC-SHA256.
 // Cabeçalhos: X-Ninebike-Event, X-Ninebike-Delivery (id estável p/ deduplicar), X-Ninebike-Timestamp,
 // X-Ninebike-Signature: sha256=<hex de HMAC(secret, `${timestamp}.${body}`)>.
-import type { Db } from '../../adapters/persistence/db';
+import type { Db } from '../../adapters/persistence/db.js';
 
 type Item = { id: string; url: string; secret: string; event: string; payload: unknown; attempts: number };
 
