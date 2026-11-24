@@ -69,5 +69,10 @@ export function fromDbError(e: unknown): ApiError {
   if (err?.code === '23505') return new ApiError('VALIDATION_FAILED', { reason: 'duplicate', constraint: err.constraint_name ?? null });
   if (err?.code === '23503') return new ApiError('VALIDATION_FAILED', { reason: 'reference_not_found', constraint: err.constraint_name ?? null });
   if (err?.code === '40P01' || err?.code === '40001') return new ApiError('VERSION_CONFLICT', { reason: 'concurrent_update' });
-  return new ApiError('INTERNAL_ERROR');
+  // Falha de conexão/autenticação no banco: expõe só o código técnico (sem mensagem/credenciais) para diagnóstico.
+  const c = String(err?.code ?? '');
+  console.error('db', c, msg.slice(0, 200));
+  if (/^(28P01|28000|3D000|08\w{3}|57P0\d|53300|XX000|E[A-Z]+|CONNECT_TIMEOUT|CONNECTION_\w+)$/.test(c))
+    return new ApiError('DEPENDENCY_UNAVAILABLE', { reason: `db_${c}` });
+  return new ApiError('INTERNAL_ERROR', c ? { reason: `db_${c}` } : {});
 }

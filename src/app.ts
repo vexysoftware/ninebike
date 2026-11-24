@@ -547,8 +547,8 @@ export function createApp(deps: AppDeps) {
 }
 
 function errorResponse(c: Ctx, e: unknown) {
-  const err = e instanceof ApiError ? e : new ApiError('INTERNAL_ERROR');
-  if (!(e instanceof ApiError)) console.error('unhandled', c.requestId, (e as Error)?.message);
+  const err = e instanceof ApiError ? e : new ApiError('INTERNAL_ERROR', { reason: `unhandled_${(e as Error)?.name ?? 'unknown'}` });
+  if (!(e instanceof ApiError)) console.error('unhandled', c.requestId, (e as Error)?.name, (e as Error)?.message);
   const extra: Record<string, string> = err.code === 'RATE_LIMITED' ? { 'retry-after': '60' } : {};
   return json(c, err.status, { code: err.code, message: err.message, details: err.details, request_id: c.requestId }, extra);
 }

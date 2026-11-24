@@ -45,7 +45,7 @@ export function LoginPage() {
           : code === 'AUTH_REQUIRED'
           ? 'Login aceito, mas este usuário não tem acesso ao sistema (sem perfil cadastrado). Confira o e-mail do proprietário inicial ou peça um convite.'
           : code === 'DEPENDENCY_UNAVAILABLE' || code === 'INTERNAL_ERROR'
-            ? `O servidor não conseguiu acessar o banco (${code}). Verifique NINEBIKE_API_DB_PASSWORD e o deploy.`
+            ? `O servidor não conseguiu acessar o banco (${code}${reason ? ` · ${reason}` : ''}). Verifique NINEBIKE_API_DB_PASSWORD e o deploy.`
             : describeError(err);
         if (supabase) await supabase.auth.signOut();
         throw new Error(msg);
