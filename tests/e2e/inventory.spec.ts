@@ -36,7 +36,7 @@ test('dono cadastra 3 bikes sem série; vendedora vê disponibilidade sem custo'
   await expect(seller.getByRole('button', { name: 'Novo produto' })).toHaveCount(0);
   await seller.getByRole('link', { name }).click();
   await expect(seller.locator('.stat').filter({ hasText: 'Disponível' })).toContainText('3');
-  await expect(seller.getByText('R$ 12.900,00')).toBeVisible();
+  await expect(seller.locator('dl.kv').getByText('R$ 12.900,00')).toBeVisible();
   await expect(seller.getByText('8.123,45')).toHaveCount(0);
   await expect(seller.getByRole('button', { name: 'Registrar entrada' })).toHaveCount(0);
   await expect(seller.getByRole('heading', { name: 'Movimentos' })).toHaveCount(0);
