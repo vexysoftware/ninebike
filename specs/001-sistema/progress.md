@@ -93,6 +93,32 @@ Dois estados separados, como exige o guia (§2.1): **código verificado** (teste
 
 **Pendente:** tributos (dependem de perfil fiscal com contador), XML/DANFE/provedor, cancelamento/CC-e, pacote mensal, importação de XMLs.
 
+## IA do WhatsApp (n8n) + T16 comissão da equipe — 24/11/2026
+
+**Decisão do responsável (24/11/2026):** integrar a IA do WhatsApp (n8n) ao sistema. Isso substitui a restrição “não provisionar credencial n8n” de contracts/api.md §129, com escopo mínimo.
+
+**Código verificado** (`tests/db/agent-commissions.test.ts`)
+- Chaves de API por integração:
+  - criadas só pelo OWNER, com MFA recente;
+  - o segredo aparece uma vez e o banco guarda apenas o hash SHA-256;
+  - podem ser revogadas na hora;
+  - limite de 120 requisições por minuto, uso registrado.
+- Escopos: `catalog.read`, `customers.read` e `leads.write`. Um JWT humano não vale nas rotas `/agent/v1`, e uma chave sem o escopo recebe 403.
+- O que a IA consulta e registra:
+  - produtos com preço formatado e disponibilidade (estoque não conferido vem como “desconhecido”), sem custo, fornecedor ou unidades;
+  - cliente pelo celular ou JID do WhatsApp: nome, vendedor, oportunidades abertas e pedidos resumidos, sem CPF, e-mail ou endereço;
+  - lead ou anotação: mesmo celular não duplica contato, `event_id` é idempotente e o conteúdo vai para o histórico da oportunidade.
+- Comissão da equipe:
+  - regra versionada pelo OWNER, com percentual padrão e exceção por vendedor, sobre o valor do pedido sem frete;
+  - o lançamento é gravado na confirmação do pedido, com snapshot da regra;
+  - sem regra, não há valor presumido;
+  - o cancelamento estorna o lançamento;
+  - o OWNER marca como paga manualmente (sem transferência automática);
+  - a vendedora vê só o próprio extrato.
+- Telas: **Comissões** (resumo por vendedor, lançamentos, regra) e **Configurações → Integração com a IA do WhatsApp**. Guia em `docs/operations/n8n-ia.md`.
+
+**Pendente:** link de pagamento depende do PSP (T07). A IA não gera cobrança.
+
 ## Próximas
 
 T10 (despesas, contas a pagar/receber gerenciais, DRE com completude) e T16 em rascunho; T13 importação dos CSVs; T06 só quando existir o primeiro efeito externo. T07–T09/T15 aguardam o PSP; T12 após T14.

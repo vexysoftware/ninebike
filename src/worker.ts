@@ -23,7 +23,7 @@ export interface Env {
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
-    if (!url.pathname.startsWith('/api/') && !url.pathname.startsWith('/public/v1/')) return env.ASSETS.fetch(req);
+    if (!url.pathname.startsWith('/api/') && !url.pathname.startsWith('/public/v1/') && !url.pathname.startsWith('/agent/v1/')) return env.ASSETS.fetch(req);
     const conn = env.HYPERDRIVE?.connectionString ?? env.DATABASE_URL;
     if (!conn) return new Response(JSON.stringify({ code: 'DEPENDENCY_UNAVAILABLE', message: 'Banco não configurado.' }), { status: 503 });
     const sql = createSql(conn);

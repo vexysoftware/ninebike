@@ -5,7 +5,7 @@ import { Db, type CommandCtx } from './adapters/persistence/db';
 import { sniffImage, type AuthAdmin, type FileStorage } from './adapters/providers/supabase';
 import * as S from './adapters/http/schemas';
 import { date, isUuid, type Parser } from './adapters/http/validate';
-import { normalizeCnpj, normalizeEmail } from './modules/crm/contact-rules';
+import { normalizeBrMobile, normalizeCnpj, normalizeEmail } from './modules/crm/contact-rules';
 
 export type AppDeps = {
   db: Db;
@@ -359,6 +359,72 @@ route('POST', '/public/v1/lead-submissions', async (c) => {
   const r = await c.deps.db.publicCall<{ submission_id: string; replayed: boolean }>('lead_submit', {
     ...p, request_hash: requestHash, client_hash: clientHash });
   return json(c, r.replayed ? 200 : 201, { data: { submission_id: r.submission_id }, request_id: c.requestId });
+});
+
+// ---------------------------------------------------------------- comissão da equipe (T16)
+route('GET', '/api/v1/staff-commissions/rule', async (c) => ok(c, await q(c, 'staff_commission_rule_get')));
+route('POST', '/api/v1/admin/staff-commission-rules', async (c) => {
+  const p = await body(c, S.staffCommissionRule);
+  const overrides = Object.fromEntries((p.overrides ?? []).map((o) => [o.profile_id.toLowerCase(), o.bps]));
+  return command(c, 'staff_commission.rule', 'staff_commission_rule_create', [{ ...p, overrides }], 201);
+});
+route('GET', '/api/v1/staff-commissions', async (c) => {
+  const from = c.url.searchParams.get('from'); const to = c.url.searchParams.get('to');
+  return ok(c, await q(c, 'staff_commission_statement', [{ seller_id: uuidParam(c.url, 'seller_id') ?? null,
+    from: from ? `${date(from, 'from')}T03:00:00Z` : null, to: to ? `${date(to, 'to')}T03:00:00Z` : null }]));
+});
+route('POST', '/api/v1/staff-commissions/payments', async (c) =>
+  command(c, 'staff_commission.paid', 'staff_commission_mark_paid', [await body(c, S.staffCommissionPaid)]));
+
+// ---------------------------------------------------------------- IA do WhatsApp (n8n): chaves e rotas /agent/v1
+route('GET', '/api/v1/admin/agent-clients', async (c) => ok(c, await q(c, 'agent_client_list')));
+route('POST', '/api/v1/admin/agent-clients', async (c) => {
+  const p = await body(c, S.agentClientCreate);
+  // O segredo nasce no Worker e nunca vai ao banco nem ao recibo: só o hash. Reenvio com a mesma chave
+  // de idempotência não devolve o segredo de novo (o OWNER revoga e cria outra).
+  const raw = new Uint8Array(32); crypto.getRandomValues(raw);
+  const token = 'nbk_' + btoa(String.fromCharCode(...raw)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const res = await command(c, 'agent_client.create', 'agent_client_create',
+    [{ name: p.name.trim(), scopes: p.scopes, token_hash: await sha256Hex(token), token_prefix: token.slice(0, 10) }], 201);
+  if (res.headers.get('idempotent-replayed')) return res;
+  const { data } = (await res.json()) as { data: Record<string, unknown> };
+  return ok(c, { ...data, token }, 201);
+});
+route('POST', '/api/v1/admin/agent-clients/{id}/revoke', async (c) => command(c, 'agent_client.revoke', 'agent_client_revoke', [c.params.id]));
+
+async function agentToken(c: Ctx): Promise<string> {
+  const h = c.req.headers.get('authorization') ?? '';
+  const m = /^Bearer (nbk_[A-Za-z0-9_-]{20,100})$/.exec(h);
+  if (!m) throw new ApiError('AUTH_REQUIRED');
+  return sha256Hex(m[1]);
+}
+/** Celular vindo do WhatsApp: aceita JID (5511999998888@s.whatsapp.net) e o formato antigo sem o nono dígito. */
+export function agentPhone(raw: string, path: string): string {
+  let d = raw.split('@')[0].replace(/\D/g, '');
+  if (d.length === 12 && d.startsWith('55') && /[6-9]/.test(d[4])) d = d.slice(0, 4) + '9' + d.slice(4);
+  return normalizeBrMobile(d, path);
+}
+const aq = async (c: Ctx, fn: string, args: unknown[]) => c.deps.db.query(fn, [await agentToken(c), ...args]);
+
+route('GET', '/agent/v1/products', async (c) => {
+  const type = c.url.searchParams.get('type');
+  const lim = Number(c.url.searchParams.get('limit') ?? 10);
+  return ok(c, await aq(c, 'agent_products_search', [{ q: (c.url.searchParams.get('q') ?? '').slice(0, 100) || null,
+    type: type === 'BIKE' || type === 'ACCESSORY' ? type : null, limit: Number.isInteger(lim) ? lim : 10,
+    only_available: c.url.searchParams.get('only_available') === 'true' }]));
+});
+route('GET', '/agent/v1/products/{id}', async (c) => ok(c, await aq(c, 'agent_product_get', [c.params.id])));
+route('GET', '/agent/v1/customers/by-phone', async (c) => {
+  const phone = agentPhone(c.url.searchParams.get('phone') ?? '', 'phone');
+  return ok(c, await aq(c, 'agent_customer_by_phone', [phone]));
+});
+route('POST', '/agent/v1/leads', async (c) => {
+  const p = await body(c, S.agentLead);
+  const mobile = agentPhone(p.mobile_phone, 'mobile_phone');
+  const args = { event_id: p.event_id.toLowerCase(), name: p.name.trim(), mobile_e164: mobile, note: p.note ?? null,
+    interest_product_id: p.interest_product_id ?? null };
+  const r = await aq(c, 'agent_lead_upsert', [{ ...args, request_hash: await sha256Hex(canonical(args)) }]) as { replayed: boolean };
+  return ok(c, r, r.replayed ? 200 : 201);
 });
 
 // ---------------------------------------------------------------- desenvolvimento local

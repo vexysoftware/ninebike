@@ -13,6 +13,7 @@ import { PipelinePage } from './pages/Pipeline';
 import { InventoryPage, ProductDetailPage } from './pages/Inventory';
 import { HomePage, SettingsPage } from './pages/Home';
 import { FiscalDocumentPage, FiscalListPage } from './pages/Fiscal';
+import { CommissionsPage } from './pages/Commissions';
 import { OrderPage, QuoteEditorPage, QuotePage, SalesPage } from './pages/Sales';
 
 function RequireSession({ children, permission }: { children: ReactNode; permission?: string }) {
@@ -40,6 +41,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="aniversariantes" element={<BirthdaysPage />} />
               <Route path="vendas" element={<SalesPage />} />
               <Route path="vendas/:id" element={<OrderPage />} />
+              <Route path="comissoes" element={<CommissionsPage />} />
               <Route path="notas" element={<FiscalListPage />} />
               <Route path="notas/:id" element={<FiscalDocumentPage />} />
               <Route path="propostas/nova" element={<QuoteEditorPage />} />

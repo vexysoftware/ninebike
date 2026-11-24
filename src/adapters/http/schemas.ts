@@ -292,3 +292,13 @@ export const fiscalEvidence: Parser<Record<string, unknown>> = (v, path) => {
 export const fiscalSettings = object({ expected_version: req(positiveInt), issuer: req(object({
   legal_name: req(string({ min: 1, max: 200 })), cnpj: req(string({ max: 20 })), state_registration: opt(optionalText(20)),
   state: req(string({ min: 2, max: 2 })), tax_regime: req(enumOf('SIMPLES_NACIONAL', 'LUCRO_PRESUMIDO', 'LUCRO_REAL')) })) });
+
+// ---------------------------------------------------------------- IA do WhatsApp (n8n) e comissão da equipe
+export const agentClientCreate = object({ name: req(string({ min: 1, max: 80 })),
+  scopes: req(array(enumOf('catalog.read', 'customers.read', 'leads.write'), { min: 1, max: 3 })) });
+export const agentLead = object({ event_id: req(uuid), name: req(name), mobile_phone: req(string({ min: 8, max: 30 })),
+  note: opt(optionalText(2000)), interest_product_id: opt(nullable(uuid)) });
+export const staffCommissionRule = object({ expected_version: req(nonNegativeInt), default_bps: req(int({ min: 0, max: 3000 })),
+  overrides: opt(array(object({ profile_id: req(uuid), bps: req(int({ min: 0, max: 3000 })) }), { max: 100 })),
+  note: opt(optionalText(300)) });
+export const staffCommissionPaid = object({ entry_ids: req(array(uuid, { min: 1, max: 200 })), note: opt(optionalText(300)) });

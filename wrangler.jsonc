@@ -8,7 +8,7 @@
     "directory": "dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*", "/public/v1/*"]
+    "run_worker_first": ["/api/*", "/public/v1/*", "/agent/v1/*"]
   },
   "observability": { "enabled": true },
   // Ambiente local: banco PostgreSQL local; segredos de dev em .dev.vars (fora do Git).
