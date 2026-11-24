@@ -179,7 +179,7 @@ export function SettingsPage() {
           </form>
         </section>
         <section className="card">
-          <div className="card-head"><h2>Leads do site</h2></div>
+          <div className="card-head"><h2>Novos leads (IA e site)</h2></div>
 
           {settings.data && users.data && (
             <Field label="Responsável pelos novos leads">{(p) => (
@@ -190,7 +190,6 @@ export function SettingsPage() {
                 {users.data!.users.filter((u) => u.active).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>)}</Field>
           )}
-          <p className="subtle" style={{ marginTop: 12 }}>Página pública: <a href="/" target="_blank" rel="noreferrer">{window.location.origin}/</a></p>
         </section>
       </div>
       <PolicyCard />
