@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { HttpError, api, describeError, supabase } from '../api';
 import { PageHead, useCommand } from '../components/Shell';
-import { Dialog, Empty, ErrorBox, Field, Icon, Loading, Status, formatInstant, formatPhone, useLoad } from '../components/ui';
+import { Dialog, Empty, ErrorBox, Field, Icon, Loading, Status, formatCents, formatInstant, formatPhone, useLoad } from '../components/ui';
 import { useSession } from '../session';
 import { MfaPrompt } from './Auth';
 import { FiscalSettingsCard } from './Fiscal';
@@ -15,10 +15,48 @@ export function HomePage() {
   const agenda = useLoad(() => api.get<Array<{ id: string; body: string; due_at: string; opportunity_id: string | null; contact_id: string; contact_name: string }>>('/api/v1/activities/agenda'), []);
   const board = useLoad(() => api.get<Array<{ id: string; name: string; kind: string; total: number }>>('/api/v1/pipeline-stages?limit=1'), []);
   const bdays = useLoad(() => api.get<{ data: Array<{ contact_id: string; name: string; mobile_phone: string }> }>(`/api/v1/contacts/birthdays?from=${today}&to=${tomorrow}`), []);
+  const dash = useLoad(() => api.get<Dashboard>('/api/v1/dashboard'), []);
   const now = Date.now();
+  const d = dash.data;
+  const isOwner = session?.profile === 'OWNER';
   return (
     <>
       <PageHead title={`Olá, ${session?.name.split(' ')[0]}`} subtitle={session?.profile === 'OWNER' ? 'Visão da loja inteira.' : 'Sua carteira de clientes.'} />
+      {d && (
+        <div className="stats">
+          <Link to="/app/vendas" className="stat" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div className="k">{isOwner ? 'Vendas no mês' : 'Minhas vendas no mês'}</div><div className="v money">{formatCents(d.month.total_cents)}</div>
+            <div className="subtle">{d.month.orders} pedido(s) · mês passado {formatCents(d.previous_month.total_cents)}</div></Link>
+          <div className="stat"><div className="k">Ticket médio</div><div className="v money">{formatCents(d.month.average_cents)}</div></div>
+          <Link to="/app/comissoes" className="stat" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div className="k">Minha comissão no mês</div><div className="v money">{d.commission_configured ? formatCents(d.my_commission_cents) : '—'}</div>
+            {!d.commission_configured && <div className="subtle">Regra não configurada</div>}</Link>
+          <Link to="/app/pipeline" className="stat" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div className="k">Leads novos (7 dias)</div><div className="v">{d.new_leads_7d}</div><div className="subtle">site + IA do WhatsApp</div></Link>
+          {isOwner && d.fiscal_pending_review != null && (
+            <Link to="/app/notas" className="stat" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <div className="k">Notas aguardando revisão</div><div className="v">{d.fiscal_pending_review}</div></Link>)}
+        </div>)}
+      {d && (isOwner || d.low_stock.length > 0) && (
+        <div className="grid-2">
+          {isOwner && (
+            <section className="card">
+              <div className="card-head"><h2>Ranking do mês</h2><Link to="/app/comissoes" className="subtle">Comissões</Link></div>
+              {!d.ranking?.length ? <Empty title="Nenhuma venda neste mês ainda." /> : (
+                <ol className="timeline">{d.ranking.map((r, i) => (
+                  <li key={i}><span className="dot" /><div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                    <span>{i + 1}º {r.seller_name} <span className="subtle">· {r.orders} pedido(s)</span></span><strong>{formatCents(r.total)}</strong></div></li>))}</ol>)}
+            </section>)}
+          <section className="card">
+            <div className="card-head"><h2>Estoque baixo</h2><Link to="/app/estoque" className="subtle">Estoque</Link></div>
+            {!d.low_stock.length ? <Empty title="Nenhum item abaixo do mínimo." /> : (
+              <ul className="timeline">{d.low_stock.slice(0, 12).map((x) => (
+                <li key={x.id}><span className="dot" /><div><Link to={`/app/estoque/${x.id}`}>{x.name}</Link>{' '}
+                  <Status tone={x.available === 0 ? 'danger' : 'warn'}>{x.available === 0 ? 'Esgotado' : `${x.available} disponível(is)`}</Status>
+                  {x.minimum > 0 && <span className="subtle"> · mínimo {x.minimum}</span>}</div></li>))}</ul>)}
+          </section>
+        </div>)}
+      <h2 className="subtle" style={{ fontSize: 14, margin: '8px 0' }}>Pipeline</h2>
       <div className="stats">
         {board.loading ? <Loading rows={1} /> : board.data?.map((s) => (
           <Link key={s.id} to="/app/pipeline" className="stat" style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -47,6 +85,9 @@ export function HomePage() {
   );
 }
 
+type Dashboard = { month: { orders: number; total_cents: string; average_cents: string }; previous_month: { orders: number; total_cents: string };
+  ranking: Array<{ seller_name: string; orders: number; total: string }> | null; my_commission_cents: string; commission_configured: boolean;
+  low_stock: Array<{ id: string; name: string; available: number; minimum: number }>; active_reservations: number; fiscal_pending_review: number | null; new_leads_7d: number };
 type Users = { users: Array<{ id: string; name: string; email: string; active: boolean; profile: 'SELLER' | 'OWNER'; version: number }>; invitations: Array<{ id: string; email: string; name: string; profile: string; created_at: string }> };
 type StageRow = { id: string; name: string; kind: 'OPEN' | 'WON' | 'LOST'; position: number; version: number; total: number };
 

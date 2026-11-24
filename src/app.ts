@@ -128,6 +128,8 @@ const page = (c: Ctx, data: unknown[], next: string | null) =>
 // ---------------------------------------------------------------- sessão e administração
 route('GET', '/api/v1/session', async (c) => ok(c, { ...(await q<object>(c, 'session')), mfa_recent: (await principal(c)).mfaRecent }));
 
+route('GET', '/api/v1/dashboard', async (c) => ok(c, await q(c, 'dashboard')));
+
 route('GET', '/api/v1/admin/users', async (c) => ok(c, await q(c, 'admin_list_users')));
 
 route('POST', '/api/v1/admin/invitations', async (c) => {

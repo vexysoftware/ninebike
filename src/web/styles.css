@@ -114,7 +114,8 @@ textarea.input { padding: var(--space-2) var(--space-3); min-height: 88px; resiz
 .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: var(--space-6); }
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-4); }
 .stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-4); }
-.stat .v { font-size: var(--text-xl); font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat .v { font-size: var(--text-xl); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat .v.money { font-size: var(--text-lg, 1.25rem); }
 .stat .k { font-size: var(--text-sm); color: var(--muted); }
 .kv { display: grid; grid-template-columns: max-content 1fr; gap: var(--space-2) var(--space-6); font-size: var(--text-sm); }
 .kv dt { color: var(--muted); }
