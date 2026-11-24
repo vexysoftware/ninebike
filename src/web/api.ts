@@ -1,8 +1,8 @@
 // Cliente da API: bearer da sessão da aba, Idempotency-Key estável por intenção e erros do contrato.
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL ?? import.meta.env.NEXT_PUBLIC_SUPABASE_URL) as string | undefined;
+const SUPABASE_ANON = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) as string | undefined;
 
 /** Supabase Auth oficial com sessão em sessionStorage (por aba). Ausente em dev local → login de desenvolvimento. */
 export const supabase: SupabaseClient | null =

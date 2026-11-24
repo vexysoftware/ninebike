@@ -9,7 +9,7 @@ describe('Vercel', () => {
     Object.assign(process.env, { DATABASE_URL: API_URL, ENVIRONMENT: 'test', APP_ORIGIN: 'https://x', SUPABASE_JWT_SECRET: 'x'.repeat(32) });
     const r = await server.fetch(new Request('https://app.vercel.app/api/server?__route=/api/v1/session'));
     expect(r.status).toBe(401);
-    expect((await r.json()).code).toBe('AUTH_REQUIRED');
+    expect(((await r.json()) as { code: string }).code).toBe('AUTH_REQUIRED');
     expect((await server.fetch(new Request('https://app.vercel.app/api/server?__route=/etc/passwd'))).status).toBe(404);
     const pub = await server.fetch(new Request('https://app.vercel.app/api/server?__route=/agent/v1/products&q=bike'));
     expect(pub.status).toBe(401);
