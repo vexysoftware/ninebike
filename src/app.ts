@@ -496,6 +496,17 @@ route('GET', '/api/v1/reports/ai', async (c) => ok(c, await q(c, 'ai_report', [r
 route('POST', '/api/v1/admin/ai-commission-rules', async (c) => command(c, 'ai_commission.rule', 'ai_commission_rule_create', [await body(c, S.aiCommissionRule)], 201));
 route('POST', '/api/v1/ai-attributions/{id}/removal', async (c) => command(c, 'ai_attribution.remove', 'ai_attribution_remove', [c.params.id, await body(c, S.reasonOnly)]));
 
+// ---------------------------------------------------------------- importação de contatos
+route('GET', '/api/v1/imports/contacts', async (c) => ok(c, await q(c, 'import_batch_list')));
+route('POST', '/api/v1/imports/contacts', async (c) => {
+  const p = await body(c, S.contactImport);
+  const { valid, invalid } = S.normalizeImportRows(p.rows as Array<Record<string, unknown>>);
+  const res = await command(c, 'contact.import', 'contact_import', [{ batch_id: p.batch_id, file_name: p.file_name ?? null,
+    owner_id: p.owner_id ?? null, rows: valid, invalid_count: invalid.length }], 200,
+    (b) => ({ ...(b as object), invalid }));
+  return res;
+});
+
 // ---------------------------------------------------------------- webhooks de saída (n8n etc.)
 route('GET', '/api/v1/admin/webhooks', async (c) => ok(c, await q(c, 'webhook_list')));
 route('POST', '/api/v1/admin/webhooks', async (c) => {

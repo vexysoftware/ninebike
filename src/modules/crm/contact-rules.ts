@@ -77,3 +77,24 @@ export function normalizeSerial(input: string, path = 'serial_number'): string {
   if (!/^[A-Z0-9./-]{3,60}$/.test(s)) throw fieldError(path, 'invalid_serial');
   return s;
 }
+
+/** Celular vindo de planilha/WhatsApp: aceita DDI, JID e o formato antigo sem o nono dígito. */
+export function normalizeLooseMobile(raw: string, path = 'mobile_phone'): string {
+  let d = raw.split('@')[0].replace(/\D/g, '');
+  if (d.startsWith('0')) d = d.replace(/^0+/, '');
+  if (d.length === 12 && d.startsWith('55') && /[6-9]/.test(d[4])) d = d.slice(0, 4) + '9' + d.slice(4);
+  if (d.length === 10 && /[6-9]/.test(d[2])) d = d.slice(0, 2) + '9' + d.slice(2);
+  return normalizeBrMobile(d, path);
+}
+
+/** Data de nascimento em dd/mm/aaaa, dd/mm, dd-mm-aaaa ou aaaa-mm-dd. */
+export function parseBirthdayText(raw: string, path = 'birthday'): { day: number; month: number; year: number | null } {
+  const s = raw.trim();
+  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s);
+  if (m) return { day: +m[3], month: +m[2], year: +m[1] };
+  m = /^(\d{1,2})[/.-](\d{1,2})(?:[/.-](\d{2,4}))?$/.exec(s);
+  if (!m) throw fieldError(path, 'invalid_date');
+  let year: number | null = m[3] ? +m[3] : null;
+  if (year !== null && year < 100) year += year > 30 ? 1900 : 2000;
+  return { day: +m[1], month: +m[2], year };
+}

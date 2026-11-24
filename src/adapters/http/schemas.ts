@@ -5,7 +5,7 @@ import {
 } from './validate.js';
 import { fieldError } from './errors.js';
 import {
-  normalizeBrMobile, normalizeCnpj, normalizeCpf, normalizeEmail, normalizeSerial, todayInSaoPaulo, validateBirthday,
+  normalizeBrMobile, normalizeLooseMobile, parseBirthdayText, normalizeCnpj, normalizeCpf, normalizeEmail, normalizeSerial, todayInSaoPaulo, validateBirthday,
 } from '../../modules/crm/contact-rules.js';
 
 const name = string({ min: 1, max: 200 });
@@ -336,3 +336,36 @@ export const aiChargeReview = object({ expected_version: req(positiveInt), confi
   order_id: opt(nullable(uuid)), note: opt(optionalText(300)) });
 export const aiCommissionRule = object({ expected_version: req(nonNegativeInt), bps: req(int({ min: 0, max: 5000 })), window_days: req(int({ min: 1, max: 730 })) });
 export const reasonOnly = object({ reason: req(string({ min: 1, max: 300 })) });
+
+// ---------------------------------------------------------------- importação de contatos (CSV)
+const importRow = object({ line: req(int({ min: 1, max: 1_000_000 })), name: opt(optionalText(200)), mobile_phone: opt(optionalText(40)),
+  cpf: opt(optionalText(20)), email: opt(optionalText(254)), birthday: opt(optionalText(20)), notes: opt(optionalText(5000)) });
+export const contactImport = object({ batch_id: req(uuid), file_name: opt(optionalText(200)), owner_id: opt(nullable(uuid)),
+  rows: req(array(importRow, { min: 1, max: 500 })) });
+
+/** Normaliza cada linha; inválidas voltam com linha+campo+motivo, sem derrubar o lote. */
+export function normalizeImportRows(rows: Array<Record<string, unknown>>) {
+  const valid: Rec[] = []; const invalid: Array<{ line: number; field: string; reason: string }> = [];
+  for (const r of rows) {
+    const line = r.line as number;
+    try {
+      const name = String(r.name ?? '').trim();
+      if (!name) throw fieldError('name', 'required');
+      if (!r.mobile_phone) throw fieldError('mobile_phone', 'required');
+      const out: Rec = { line, name: name.slice(0, 200), mobile_e164: normalizeLooseMobile(String(r.mobile_phone)) };
+      const cpf = String(r.cpf ?? '').replace(/\D/g, '');
+      if (cpf) out.cpf = normalizeCpf(cpf);
+      const email = String(r.email ?? '').trim();
+      if (email) out.email = normalizeEmail(email);
+      const notes = String(r.notes ?? '').trim();
+      if (notes) out.note = notes;
+      const b = String(r.birthday ?? '').trim();
+      if (b) Object.assign(out, validateBirthday(parseBirthdayText(b), todayInSaoPaulo()));
+      valid.push(out);
+    } catch (e) {
+      const d = (e as { details?: { field?: string; reason?: string } }).details ?? {};
+      invalid.push({ line, field: d.field ?? '?', reason: d.reason ?? 'invalid' });
+    }
+  }
+  return { valid, invalid };
+}
