@@ -53,7 +53,13 @@ async function request<T>(method: string, path: string, body?: unknown, key?: st
     throw new HttpError(0, 'NETWORK', 'Sem conexão com o servidor. Nada foi confirmado; tente de novo.');
   }
   const text = await res.text();
-  const json = text ? JSON.parse(text) : {};
+  let json: Record<string, any> = {};
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    // Resposta não-JSON (ex.: falha da função na Vercel): mostra o status em vez de falhar em silêncio.
+    throw new HttpError(res.status, 'INTERNAL_ERROR', `Servidor respondeu ${res.status} (${res.headers.get('x-vercel-error') ?? 'sem detalhe'}). Veja os logs do deploy.`);
+  }
   if (!res.ok) {
     if (res.status === 401) onAuthLost();
     throw new HttpError(res.status, json.code ?? 'INTERNAL_ERROR', json.message ?? 'Erro inesperado.', json.details ?? {});
