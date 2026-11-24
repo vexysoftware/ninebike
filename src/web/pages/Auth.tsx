@@ -34,6 +34,22 @@ export function LoginPage() {
       } else {
         await verifyTotp(code);
       }
+      // Confere a sessão no servidor e mostra o motivo se falhar (antes ficava em silêncio na tela de login).
+      try {
+        await api.get('/api/v1/session');
+      } catch (err) {
+        const code = (err as { code?: string }).code;
+        const reason = (err as { details?: { reason?: string } }).details?.reason;
+        const msg = code === 'AUTH_REQUIRED' && reason === 'invalid_token'
+          ? 'Login aceito pelo Supabase, mas o servidor não validou o token (configuração SUPABASE_URL / SUPABASE_JWT_SECRET na Vercel).'
+          : code === 'AUTH_REQUIRED'
+          ? 'Login aceito, mas este usuário não tem acesso ao sistema (sem perfil cadastrado). Confira o e-mail do proprietário inicial ou peça um convite.'
+          : code === 'DEPENDENCY_UNAVAILABLE' || code === 'INTERNAL_ERROR'
+            ? `O servidor não conseguiu acessar o banco (${code}). Verifique NINEBIKE_API_DB_PASSWORD e o deploy.`
+            : describeError(err);
+        if (supabase) await supabase.auth.signOut();
+        throw new Error(msg);
+      }
       await reload();
     } catch (err) {
       setError(err instanceof Error && !('code' in err) ? err.message : describeError(err));

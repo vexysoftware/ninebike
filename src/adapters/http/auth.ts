@@ -47,7 +47,9 @@ export async function authenticate(req: Request, cfg: AuthConfig, nowSeconds = M
     }
   } catch (e) {
     if (e instanceof ApiError) throw e;
-    throw new ApiError('AUTH_REQUIRED');
+    // Log sem o token: só o tipo do erro do jose (ex.: ERR_JWT_CLAIM_VALIDATION_FAILED "iss"), para diagnóstico.
+    console.warn('auth: token rejeitado', (e as { code?: string }).code, (e as { claim?: string }).claim ?? '', cfg.issuer);
+    throw new ApiError('AUTH_REQUIRED', { reason: 'invalid_token' });
   }
   if (!payload.sub || payload.role !== 'authenticated') throw new ApiError('AUTH_REQUIRED');
   return { userId: payload.sub, sessionId: payload.session_id ?? null, mfaRecent: hasRecentTotp(payload, nowSeconds) };
