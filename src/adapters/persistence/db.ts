@@ -6,7 +6,7 @@ import { ApiError, fromDbError } from '../http/errors';
 export type Sql = postgres.Sql;
 
 export function createSql(connectionString: string): Sql {
-  return postgres(connectionString, { max: 4, fetch_types: false, idle_timeout: 5, connect_timeout: 10, onnotice: () => {} });
+  return postgres(connectionString, { max: 4, prepare: false, fetch_types: false, idle_timeout: 5, connect_timeout: 10, onnotice: () => {} });
 }
 
 const FN_NAME = /^[a-z_]+$/;
