@@ -369,3 +369,15 @@ export function normalizeImportRows(rows: Array<Record<string, unknown>>) {
   }
   return { valid, invalid };
 }
+
+// ---------------------------------------------------------------- venda rápida e caixa
+const payMethod = enumOf('CASH', 'PIX', 'DEBIT', 'CREDIT', 'TRANSFER', 'BOLETO');
+const salePayment = object({ method: req(payMethod), amount_cents: req(moneyCents), installments: opt(int({ min: 1, max: 24 })),
+  received: opt(boolean), due_date: opt(date) });
+export const quickSale = object({ contact_id: req(uuid), items: req(array(quoteItem, { min: 1, max: 30 })), freight_cents: opt(moneyCents),
+  payments: req(array(salePayment, { min: 1, max: 6 })) });
+export const orderReceive = object({ method: req(payMethod), amount_cents: req(moneyCents), installments: opt(int({ min: 1, max: 24 })), description: opt(optionalText(200)) });
+export const cashOpen = object({ opening_cents: req(moneyCents) });
+export const cashEntry = object({ direction: req(enumOf('IN', 'OUT')), kind: req(enumOf('SUPPLY', 'WITHDRAWAL', 'EXPENSE', 'OTHER')),
+  method: req(enumOf('CASH', 'PIX', 'DEBIT', 'CREDIT', 'TRANSFER', 'OTHER')), amount_cents: req(moneyCents), description: req(string({ min: 1, max: 200 })) });
+export const cashClose = object({ counted_cents: req(moneyCents), note: opt(optionalText(500)) });

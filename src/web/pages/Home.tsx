@@ -28,7 +28,8 @@ export function HomePage() {
   return (
     <>
       <PageHead title={`Olá, ${session?.name.split(' ')[0]}`}>
-        <Link to="/app/propostas/nova" className="btn btn-primary"><Icon name="plus" /> Nova proposta</Link>
+        <Link to="/app/propostas/nova" className="btn"><Icon name="plus" /> Nova proposta</Link>
+        <Link to="/app/venda-rapida" className="btn btn-primary"><Icon name="plus" /> Venda rápida</Link>
       </PageHead>
       {d && (
         <div className="stats">

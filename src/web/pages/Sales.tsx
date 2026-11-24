@@ -4,6 +4,7 @@ import { HttpError, accessToken, api, describeError } from '../api';
 import { PageHead, useCommand } from '../components/Shell';
 import { Empty, ErrorBox, Field, Icon, Loading, Status, formatCents, formatDateOnly, formatInstant, parseMoneyInput, centsToInput, useLoad } from '../components/ui';
 import { useSession } from '../session';
+import { ReceiptsCard } from './Cash';
 
 type QuoteItem = { id: string; product_id: string; unit_id: string | null; unit_code: string | null; quantity: number; unit_price_cents: string; discount_cents: string; description: string; line_total_cents: string };
 type Quote = {
@@ -259,6 +260,7 @@ export function OrderPage() {
         <div className="stat"><div className="k">Nota fiscal</div><div className="v" style={{ fontSize: 16 }}>{FISCAL[d.fiscal_state]}</div></div>
       </div>
       {d.cancelled_reason && <div className="alert alert-danger"><strong>Cancelado</strong>{d.cancelled_reason}</div>}
+      <ReceiptsCard orderId={d.id} cancelled={d.commercial_state === 'CANCELLED'} />
       <div className="grid-2">
         <section className="card">
           <div className="card-head"><h2>Cliente</h2><Link to={`/app/contatos/${d.contact_id}`} className="subtle">Cadastro</Link></div>

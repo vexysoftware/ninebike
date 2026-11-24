@@ -496,6 +496,20 @@ route('GET', '/api/v1/reports/ai', async (c) => ok(c, await q(c, 'ai_report', [r
 route('POST', '/api/v1/admin/ai-commission-rules', async (c) => command(c, 'ai_commission.rule', 'ai_commission_rule_create', [await body(c, S.aiCommissionRule)], 201));
 route('POST', '/api/v1/ai-attributions/{id}/removal', async (c) => command(c, 'ai_attribution.remove', 'ai_attribution_remove', [c.params.id, await body(c, S.reasonOnly)]));
 
+// ---------------------------------------------------------------- venda rápida e caixa do dia
+route('POST', '/api/v1/quick-sales', async (c) => command(c, 'sale.quick', 'quick_sale', [await body(c, S.quickSale)], 201));
+route('POST', '/api/v1/orders/{id}/receipts', async (c) => command(c, 'order.receive', 'order_receive', [c.params.id, await body(c, S.orderReceive)], 201));
+route('GET', '/api/v1/orders/{id}/receipts', async (c) => ok(c, await q(c, 'order_receipts', [c.params.id])));
+route('GET', '/api/v1/cash', async (c) => {
+  const d = c.url.searchParams.get('date');
+  return ok(c, await q(c, 'cash_day', [d ? date(d, 'date') : null]));
+});
+route('POST', '/api/v1/cash/open', async (c) => command(c, 'cash.open', 'cash_open', [await body(c, S.cashOpen)]));
+route('POST', '/api/v1/cash/entries', async (c) => command(c, 'cash.entry', 'cash_entry_create', [await body(c, S.cashEntry)], 201));
+route('POST', '/api/v1/cash/entries/{id}/reversal', async (c) => command(c, 'cash.reverse', 'cash_entry_reverse', [c.params.id, await body(c, S.reasonOnly)]));
+route('POST', '/api/v1/cash/close', async (c) => command(c, 'cash.close', 'cash_close', [await body(c, S.cashClose)]));
+route('POST', '/api/v1/cash/reopen', async (c) => command(c, 'cash.reopen', 'cash_reopen', [{}]));
+
 // ---------------------------------------------------------------- importação de contatos
 route('GET', '/api/v1/imports/contacts', async (c) => ok(c, await q(c, 'import_batch_list')));
 route('POST', '/api/v1/imports/contacts', async (c) => {
