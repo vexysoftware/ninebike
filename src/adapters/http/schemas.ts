@@ -302,3 +302,12 @@ export const staffCommissionRule = object({ expected_version: req(nonNegativeInt
   overrides: opt(array(object({ profile_id: req(uuid), bps: req(int({ min: 0, max: 3000 })) }), { max: 100 })),
   note: opt(optionalText(300)) });
 export const staffCommissionPaid = object({ entry_ids: req(array(uuid, { min: 1, max: 200 })), note: opt(optionalText(300)) });
+
+// ---------------------------------------------------------------- T10 despesas
+const month: Parser<string> = (v, path) => { const d = date(v, path); return d.slice(0, 8) + '01'; };
+export const expenseCreate = object({ description: req(string({ min: 1, max: 200 })), category_id: req(uuid), supplier_contact_id: opt(nullable(uuid)),
+  amount_cents: req(moneyCents), competence_month: req(month), due_date: req(date), note: opt(optionalText(1000)), installments: opt(int({ min: 1, max: 48 })) });
+export const expenseCancel = object({ expected_version: req(positiveInt), reason: req(string({ min: 1, max: 300 })) });
+export const expensePay = object({ expected_version: req(positiveInt), amount_cents: req(moneyCents), paid_on: req(date),
+  method: req(enumOf('PIX', 'BOLETO', 'CARD', 'CASH', 'TRANSFER', 'OTHER')), note: opt(optionalText(300)) });
+export const expenseReverse = object({ reason: req(string({ min: 1, max: 300 })) });

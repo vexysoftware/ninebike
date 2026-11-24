@@ -29,6 +29,7 @@ export function Shell() {
           <NavLink to="/app/estoque"><Icon name="bike" /> Catálogo e estoque</NavLink>
           {can('suppliers.read') && <NavLink to="/app/fornecedores"><Icon name="truck" /> Fornecedores</NavLink>}
           {isOwner && <><div className="nav-section">Administração</div>
+            <NavLink to="/app/financeiro"><Icon name="list" /> Financeiro</NavLink>
             <NavLink to="/app/configuracoes"><Icon name="settings" /> Configurações</NavLink></>}
         </nav>
         <div className="sidebar-foot">

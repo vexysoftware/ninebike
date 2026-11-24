@@ -119,6 +119,25 @@ Dois estados separados, como exige o guia (§2.1): **código verificado** (teste
 
 **Pendente:** link de pagamento depende do PSP (T07). A IA não gera cobrança.
 
+## T10 (parte interna) e visão geral — 24/11/2026
+
+**Código verificado** (`tests/db/expenses.test.ts`)
+- Despesas e contas a pagar (permissão `finance.manage`, só OWNER):
+  - categorias com classificação (operacional, imposto, financeira, fora do resultado);
+  - competência separada do vencimento;
+  - parcelas mensais sem perder centavo;
+  - baixa parcial com lock e versão, sem sobrequitação;
+  - estorno de baixa com motivo;
+  - cancelamento só sem baixa ativa.
+- Resultado gerencial do mês:
+  - receita por pedido confirmado (sem frete), CMV pelo custo histórico do pedido, comissões, impostos e despesas por competência;
+  - custo ausente deixa o resultado PARCIAL;
+  - avisos para imposto não lançado e para taxas do meio de pagamento ainda não integradas;
+  - pago no mês (caixa) aparece separado.
+- Visão geral: vendas do mês e do mês anterior, ticket médio, ranking por vendedor (OWNER), comissão própria, leads de 7 dias (site e IA), estoque baixo e notas aguardando revisão.
+
+**Pendente (T10):** conciliação com extrato do PSP, contas a receber oficiais, fechamento mensal versionado e saldos de abertura.
+
 ## Próximas
 
 T10 (despesas, contas a pagar/receber gerenciais, DRE com completude) e T16 em rascunho; T13 importação dos CSVs; T06 só quando existir o primeiro efeito externo. T07–T09/T15 aguardam o PSP; T12 após T14.

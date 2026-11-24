@@ -378,6 +378,19 @@ route('GET', '/api/v1/staff-commissions', async (c) => {
 route('POST', '/api/v1/staff-commissions/payments', async (c) =>
   command(c, 'staff_commission.paid', 'staff_commission_mark_paid', [await body(c, S.staffCommissionPaid)]));
 
+// ---------------------------------------------------------------- T10 despesas e resultado gerencial (OWNER)
+route('GET', '/api/v1/expense-categories', async (c) => ok(c, await q(c, 'expense_categories')));
+route('GET', '/api/v1/expenses', async (c) => {
+  const st = c.url.searchParams.get('status'); const from = c.url.searchParams.get('from'); const to = c.url.searchParams.get('to');
+  return ok(c, await q(c, 'expense_list', [{ status: st && ['OPEN', 'OVERDUE', 'PAID', 'PARTIAL', 'CANCELLED'].includes(st) ? st : null,
+    from: from ? date(from, 'from') : null, to: to ? date(to, 'to') : null, category_id: uuidParam(c.url, 'category_id') ?? null }]));
+});
+route('POST', '/api/v1/expenses', async (c) => command(c, 'expense.create', 'expense_create', [await body(c, S.expenseCreate)], 201));
+route('POST', '/api/v1/expenses/{id}/cancellations', async (c) => command(c, 'expense.cancel', 'expense_cancel', [c.params.id, await body(c, S.expenseCancel)]));
+route('POST', '/api/v1/expenses/{id}/payments', async (c) => command(c, 'expense.pay', 'expense_pay', [c.params.id, await body(c, S.expensePay)], 201));
+route('POST', '/api/v1/expense-payments/{id}/reversals', async (c) => command(c, 'expense.reverse', 'expense_payment_reverse', [c.params.id, await body(c, S.expenseReverse)]));
+route('GET', '/api/v1/reports/management-result', async (c) => ok(c, await q(c, 'management_result', [date(c.url.searchParams.get('month'), 'month')])));
+
 // ---------------------------------------------------------------- IA do WhatsApp (n8n): chaves e rotas /agent/v1
 route('GET', '/api/v1/admin/agent-clients', async (c) => ok(c, await q(c, 'agent_client_list')));
 route('POST', '/api/v1/admin/agent-clients', async (c) => {
